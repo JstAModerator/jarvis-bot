@@ -50,6 +50,7 @@ app.get("/", (req, res) => {
   res.send("Jarvis is alive!");
 });
 
-app.listen(3000, () => {
-  console.log("Express keep-alive server running on port 3000");
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Express keep-alive server running on port ${PORT}`);
 });
