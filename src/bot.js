@@ -1,9 +1,9 @@
 import { Client, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
+import express from "express";
 
 dotenv.config();
 
-// Import command executors
 import { execute as pingExecute } from "./commands/ping.js";
 import { execute as memeExecute } from "./commands/meme.js";
 import { execute as remindExecute } from "./commands/remind.js";
@@ -42,4 +42,14 @@ client.on("interactionCreate", async interaction => {
   }
 });
 
-client.login(process.env.TOKEN);
+client.login(process.env.DISCORD_TOKEN);
+
+const app = express();
+
+app.get("/", (req, res) => {
+  res.send("Jarvis is alive!");
+});
+
+app.listen(3000, () => {
+  console.log("Express keep-alive server running on port 3000");
+});
