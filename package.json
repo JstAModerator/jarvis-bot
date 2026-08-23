@@ -1,0 +1,17 @@
+{
+  "name": "jarvis-bot",
+  "version": "1.0.0",
+  "description": "My Discord bot",
+  "main": "src/bot.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/bot.js"
+  },
+  "author": "Saady",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.27.0",
+    "dotenv": "^17.4.2",
+    "node-fetch": "^3.3.2"
+  }
+}
