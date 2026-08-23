@@ -22,7 +22,7 @@ const commands = [
   eightball.toJSON()
 ];
 
-const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
 async function deploy() {
   try {
