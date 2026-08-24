@@ -1,3 +1,4 @@
+import "./deploy-commands.js";
 import { Client, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
 import express from "express";
