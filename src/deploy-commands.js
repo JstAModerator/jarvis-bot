@@ -1,39 +1,61 @@
+import fs from "fs";
+import path from "path";
 import { REST, Routes } from "discord.js";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
 
-dotenv.config();
+// Resolve correct directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-// Import all commands
-import { data as ping } from "./commands/ping.js";
-import { data as meme } from "./commands/meme.js";
-import { data as remind } from "./commands/remind.js";
-import { data as calc } from "./commands/calc.js";
-import { data as uptime } from "./commands/uptime.js";
-import { data as botinfo } from "./commands/botinfo.js";
-import { data as eightball } from "./commands/eightball.js";
+// Load .env strictly
+dotenv.config({
+  path: path.join(__dirname, "../.env"),
+  override: true,
+});
 
-const commands = [
-  ping.toJSON(),
-  meme.toJSON(),
-  remind.toJSON(),
-  calc.toJSON(),
-  uptime.toJSON(),
-  botinfo.toJSON(),
-  eightball.toJSON()
-];
+// Debug env
+console.log("Loaded ENV:", {
+  CLIENT_ID: process.env.CLIENT_ID,
+  GUILD_ID: process.env.GUILD_ID,
+  DISCORD_TOKEN: process.env.DISCORD_TOKEN?.slice(0, 10) + "...",
+});
 
+// Auto‑load commands
+const commandsPath = path.join(__dirname, "commands");
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+
+const commands = [];
+
+for (const file of commandFiles) {
+  const filePath = path.join(commandsPath, file);
+  const command = await import(filePath);
+
+  if ("data" in command && "execute" in command) {
+    commands.push(command.data.toJSON());
+    console.log(`✔ Loaded command: ${file}`);
+  } else {
+    console.log(`⚠ Skipped ${file} — missing data or execute`);
+  }
+}
+
+// REST client
 const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
+// Deploy
 async function deploy() {
   try {
     console.log("Registering slash commands...");
     await rest.put(
-      Routes.applicationCommands(process.env.CLIENT_ID),
+      Routes.applicationGuildCommands(
+        process.env.CLIENT_ID,
+        process.env.GUILD_ID
+      ),
       { body: commands }
     );
-    console.log("Slash commands registered successfully!");
+    console.log("✅ Commands deployed successfully!");
   } catch (error) {
-    console.error(error);
+    console.error("❌ Deployment failed:", error);
   }
 }
 
