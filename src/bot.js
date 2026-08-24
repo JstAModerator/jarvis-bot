@@ -1,16 +1,32 @@
 import { Client, GatewayIntentBits } from "discord.js";
 import dotenv from "dotenv";
 import express from "express";
+import fs from "fs";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
-import { execute as pingExecute } from "./commands/ping.js";
-import { execute as memeExecute } from "./commands/meme.js";
-import { execute as remindExecute } from "./commands/remind.js";
-import { execute as calcExecute } from "./commands/calc.js";
-import { execute as uptimeExecute } from "./commands/uptime.js";
-import { execute as botinfoExecute } from "./commands/botinfo.js";
-import { execute as eightballExecute } from "./commands/eightball.js";
+// Resolve directory
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Auto‑load command executors
+const commands = new Map();
+const commandsPath = path.join(__dirname, "commands");
+const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+
+for (const file of commandFiles) {
+  const filePath = path.join(commandsPath, file);
+  const command = await import(filePath);
+
+  if ("data" in command && "execute" in command) {
+    commands.set(command.data.name, command.execute);
+    console.log(`✔ Loaded command: ${command.data.name}`);
+  } else {
+    console.log(`⚠ Skipped ${file} — missing data or execute`);
+  }
+}
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
@@ -23,34 +39,23 @@ client.once("ready", () => {
 client.on("interactionCreate", async interaction => {
   if (!interaction.isCommand()) return;
 
-  const { commandName } = interaction;
+  const executor = commands.get(interaction.commandName);
+  if (!executor) {
+    return interaction.reply({ content: "Command not found.", ephemeral: true });
+  }
 
-  if (commandName === "ping") {
-    await pingExecute(interaction);
-  } else if (commandName === "meme") {
-    await memeExecute(interaction);
-  } else if (commandName === "remind") {
-    await remindExecute(interaction);
-  } else if (commandName === "calc") {
-    await calcExecute(interaction);
-  } else if (commandName === "uptime") {
-    await uptimeExecute(interaction);
-  } else if (commandName === "botinfo") {
-    await botinfoExecute(interaction);
-  } else if (commandName === "eightball") {
-    await eightballExecute(interaction);
+  try {
+    await executor(interaction);
+  } catch (error) {
+    console.error(error);
+    await interaction.reply({ content: "Error executing command.", ephemeral: true });
   }
 });
 
 client.login(process.env.DISCORD_TOKEN);
 
+// Express keep‑alive
 const app = express();
-
-app.get("/", (req, res) => {
-  res.send("Jarvis is alive!");
-});
-
+app.get("/", (req, res) => res.send("Jarvis is alive!"));
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Express keep-alive server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Express keep-alive server running on port ${PORT}`));
