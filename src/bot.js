@@ -17,7 +17,7 @@ const client = new Client({
 });
 
 // Load commands AFTER bot is ready
-client.once("clientReady", async () => {
+client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
 
   client.commands = new Map();
