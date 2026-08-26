@@ -16,14 +16,17 @@ const client = new Client({
   intents: [GatewayIntentBits.Guilds]
 });
 
-// Load commands AFTER bot is ready
-client.once("ready", async () => {
+// Shared ready handler (works for v14 + v15)
+async function onReady() {
   console.log(`Logged in as ${client.user.tag}`);
 
+  // Command map
   client.commands = new Map();
 
   const commandsPath = path.join(__dirname, "commands");
-  const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+  const commandFiles = fs.readdirSync(commandsPath).filter(file =>
+    file.endsWith(".js")
+  );
 
   for (const file of commandFiles) {
     const filePath = path.join(commandsPath, file);
@@ -36,7 +39,13 @@ client.once("ready", async () => {
       console.log(`⚠ Skipped ${file} — missing data or execute`);
     }
   }
-});
+
+  console.log("✅ Bot startup complete (commands loaded)");
+}
+
+// Support both v14 (`ready`) and v15 (`clientReady`)
+client.once("ready", onReady);
+client.once("clientReady", onReady);
 
 // Interaction handler
 client.on("interactionCreate", async interaction => {
@@ -44,25 +53,52 @@ client.on("interactionCreate", async interaction => {
 
   const executor = client.commands.get(interaction.commandName);
   if (!executor) {
-    return interaction.reply({ content: "Command not found.", ephemeral: true });
+    return interaction.reply({
+      content: "Command not found.",
+      ephemeral: true
+    });
   }
 
   try {
     await executor(interaction);
   } catch (error) {
     console.error(error);
-    await interaction.reply({
-      content: "Error executing command.",
-      ephemeral: true
-    });
+    try {
+      await interaction.reply({
+        content: "Error executing command.",
+        ephemeral: true
+      });
+    } catch {
+      // ignore double reply errors
+    }
   }
 });
 
-// Login
-client.login(process.env.DISCORD_TOKEN);
+// Login (token must be set in Render Environment, not from a ghost .env)
+if (!process.env.DISCORD_TOKEN) {
+  console.error("❌ DISCORD_TOKEN is missing. Set it in Render environment.");
+  process.exit(1);
+}
 
-// Express keep‑alive
+client.login(process.env.DISCORD_TOKEN).catch(err => {
+  console.error("❌ Failed to login to Discord:", err);
+  process.exit(1);
+});
+
+// Express keep‑alive for Render Web Service
 const app = express();
-app.get("/", (req, res) => res.send("Jarvis is alive!"));
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Express keep-alive server running on port ${PORT}`));
+
+app.get("/", (req, res) => {
+  res.send("Jarvis is alive!");
+});
+
+// IMPORTANT: let Render control the port
+const PORT = process.env.PORT;
+if (!PORT) {
+  console.error("❌ PORT is missing. Render should provide this for Web Services.");
+  process.exit(1);
+}
+
+app.listen(PORT, () => {
+  console.log(`Express keep-alive server running on port ${PORT}`);
+});
