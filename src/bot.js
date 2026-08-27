@@ -74,7 +74,7 @@ client.on("interactionCreate", async interaction => {
   }
 });
 
-// Login (token must be set in Render Environment, not from a ghost .env)
+// Login (token must be set in Render Environment)
 if (!process.env.DISCORD_TOKEN) {
   console.error("❌ DISCORD_TOKEN is missing. Set it in Render environment.");
   process.exit(1);
