@@ -44,7 +44,6 @@ async function onReady() {
 }
 
 // Support both v14 (`ready`) and v15 (`clientReady`)
-client.once("ready", onReady);
 client.once("clientReady", onReady);
 
 // Interaction handler
