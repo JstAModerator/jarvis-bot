@@ -19,8 +19,15 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 10000;
 
-// Basic web server for Render
-app.get("/", (req, res) => res.send("Jarvis is alive!"));
+// Serve homepage
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "website", "index.html"));
+});
+
+// Serve CSS
+app.get("/styles.css", (req, res) => {
+  res.sendFile(path.join(__dirname, "website", "styles.css"));
+});
 
 // Start server
 app.listen(PORT, () => {
@@ -117,13 +124,4 @@ if (!process.env.DISCORD_TOKEN) {
 client.login(process.env.DISCORD_TOKEN).catch(err => {
   console.error("❌ Failed to login to Discord:", err);
   process.exit(1);
-});
-// Serve homepage
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "website", "index.html"));
-});
-
-// Serve CSS
-app.get("/styles.css", (req, res) => {
-  res.sendFile(path.join(__dirname, "website", "styles.css"));
 });
