@@ -24,6 +24,16 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "website", "index.html"));
 });
 
+// Serve Terms of Service page
+app.get("/tos", (req, res) => {
+  res.sendFile(path.join(__dirname, "website", "tos.html"));
+});
+
+// Serve Privacy Policy page
+app.get("/privacy", (req, res) => {
+  res.sendFile(path.join(__dirname, "website", "privacy.html"));
+});
+
 // Serve CSS
 app.get("/styles.css", (req, res) => {
   res.sendFile(path.join(__dirname, "website", "styles.css"));
