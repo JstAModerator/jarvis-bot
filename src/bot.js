@@ -5,12 +5,45 @@ import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import Database from "better-sqlite3";
 
 dotenv.config();
 
 // Resolve directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+/* ============================================================
+   DATABASE (SERVER SETTINGS)
+   ============================================================ */
+
+const db = new Database(path.join(__dirname, "database", "settings.db"));
+
+// Create settings table
+db.prepare(`
+  CREATE TABLE IF NOT EXISTS server_settings (
+    guild_id TEXT PRIMARY KEY,
+    embed_color TEXT DEFAULT '#6a4cff',
+    welcome_message TEXT DEFAULT 'Welcome to the server!',
+    meme_source TEXT DEFAULT 'default'
+  )
+`).run();
+
+// Helper: get settings
+function getSettings(guildId) {
+  return db.prepare(`SELECT * FROM server_settings WHERE guild_id = ?`).get(guildId);
+}
+
+// Helper: create default settings
+function createDefaultSettings(guildId) {
+  db.prepare(`INSERT OR IGNORE INTO server_settings (guild_id) VALUES (?)`).run(guildId);
+}
+
+// Helper: update setting
+function updateSetting(guildId, key, value) {
+  db.prepare(`UPDATE server_settings SET ${key} = ? WHERE guild_id = ?`).run(value, guildId);
+}
+
 
 /* ============================================================
    KEEP-ALIVE SERVER + SELF-PING (PREVENTS RENDER SLEEPING)
@@ -49,7 +82,7 @@ setInterval(() => {
   fetch("https://jarvis-bot-fod2.onrender.com")
     .then(() => console.log("Keep-alive ping sent"))
     .catch(() => console.log("Keep-alive ping failed"));
-}, 240000); // 4 minutes
+}, 240000);
 
 
 /* ============================================================
@@ -58,6 +91,12 @@ setInterval(() => {
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
+});
+
+// Auto-create settings when Jarvis joins a server
+client.on("guildCreate", guild => {
+  createDefaultSettings(guild.id);
+  console.log(`Created settings for ${guild.name}`);
 });
 
 // Shared ready handler (works for v14 + v15)
