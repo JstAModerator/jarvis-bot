@@ -118,8 +118,6 @@ client.login(process.env.DISCORD_TOKEN).catch(err => {
   console.error("❌ Failed to login to Discord:", err);
   process.exit(1);
 });
-import path from "path";
-
 // Serve homepage
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "website", "index.html"));
