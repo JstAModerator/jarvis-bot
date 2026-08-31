@@ -57,6 +57,10 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "website", "index.html"));
 });
 
+app.get("/dashboard", (req, res) => {
+  res.sendFile(path.join(__dirname, "website", "dashboard.html"));
+});
+
 // Serve Terms of Service page
 app.get("/tos", (req, res) => {
   res.sendFile(path.join(__dirname, "website", "tos.html"));
@@ -70,6 +74,28 @@ app.get("/privacy", (req, res) => {
 // Serve CSS
 app.get("/styles.css", (req, res) => {
   res.sendFile(path.join(__dirname, "website", "styles.css"));
+});
+
+/* ============================================================
+   API ROUTES (Dashboard → Bot Settings)
+   ============================================================ */
+
+app.use(express.json());
+
+app.post("/api/update-settings/:guildId", (req, res) => {
+  const guildId = req.params.guildId;
+  const { embed_color, welcome_message, meme_source } = req.body;
+
+  try {
+    if (embed_color) updateSetting(guildId, "embed_color", embed_color);
+    if (welcome_message) updateSetting(guildId, "welcome_message", welcome_message);
+    if (meme_source) updateSetting(guildId, "meme_source", meme_source);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false });
+  }
 });
 
 // Start server

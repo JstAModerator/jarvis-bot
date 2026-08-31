@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Jarvis Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+
+  <style>
+    .dashboard-container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: #222;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: left;
+    }
+
+    .dashboard-container h2 {
+      color: #8366ff;
+      margin-bottom: 20px;
+    }
+
+    .setting-group {
+      margin-bottom: 25px;
+    }
+
+    .setting-group label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+
+    .setting-group input,
+    .setting-group select {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      background: #333;
+      color: white;
+    }
+
+    .save-btn {
+      background: #6a4cff;
+      padding: 12px 20px;
+      border-radius: 8px;
+      color: white;
+      font-size: 18px;
+      border: none;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    .save-btn:hover {
+      background: #8366ff;
+    }
+
+    #status {
+      margin-top: 20px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>Jarvis Dashboard</h1>
+    <p>Customize Jarvis for your server</p>
+  </header>
+
+  <div class="dashboard-container">
+
+    <h2>Server Settings</h2>
+
+    <div class="setting-group">
+      <label>Embed Color (Hex)</label>
+      <input id="embedColor" placeholder="#6a4cff">
+    </div>
+
+    <div class="setting-group">
+      <label>Welcome Message</label>
+      <input id="welcomeMessage" placeholder="Welcome to the server!">
+    </div>
+
+    <div class="setting-group">
+      <label>Meme Source</label>
+      <select id="memeSource">
+        <option value="default">Default</option>
+        <option value="reddit">Reddit</option>
+      </select>
+    </div>
+
+    <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+
+    <p id="status"></p>
+
+  </div>
+
+  <script>
+    async function saveSettings() {
+      const guildId = prompt("Enter your server ID:");
+
+      const body = {
+        embed_color: document.getElementById("embedColor").value,
+        welcome_message: document.getElementById("welcomeMessage").value,
+        meme_source: document.getElementById("memeSource").value
+      };
+
+      const res = await fetch(`/api/update-settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      document.getElementById("status").innerText =
+        res.ok ? "Settings saved!" : "Failed to save settings.";
+    }
+  </script>
+
+</body>
+</html>
