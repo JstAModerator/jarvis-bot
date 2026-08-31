@@ -42,6 +42,15 @@ export const data = new SlashCommandBuilder()
   );
 
 export async function execute(interaction) {
+
+  // ⭐ ADMIN‑ONLY PROTECTION ⭐
+  if (!interaction.member.permissions.has("Administrator")) {
+    return interaction.reply({
+      content: "Only server admins can change Jarvis settings.",
+      ephemeral: true
+    });
+  }
+
   const guildId = interaction.guild.id;
 
   // Ensure settings exist
