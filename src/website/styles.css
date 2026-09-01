@@ -75,3 +75,48 @@ footer {
   background: #0a0a0f;
   color: #888;
 }
+/* Navbar layout */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 60px;
+  background: #111;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 10;
+}
+
+/* Nav links horizontal */
+.nav-links {
+  display: flex;
+  gap: 30px;
+  list-style: none;
+}
+
+.nav-links a {
+  color: #8366ff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.nav-links a:hover {
+  color: #fff;
+}
+
+/* Hero image */
+.hero-image img {
+  width: 400px;
+  display: block;
+  margin: 0 auto;
+  filter: drop-shadow(0 0 20px #6a4cff);
+}
+.hero {
+  position: relative;
+  height: 100vh;
+  background: #000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
