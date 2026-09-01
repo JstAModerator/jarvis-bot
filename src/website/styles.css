@@ -7,7 +7,6 @@ body {
   overflow-x: hidden;
 }
 
-/* NAVBAR */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -51,7 +50,7 @@ body {
   color: #fff;
 }
 
-/* Make Login with Discord look like a button */
+/* Login with Discord button */
 .nav-links a[href="/login"] {
   background: #5865F2;
   color: #fff;
@@ -62,18 +61,6 @@ body {
 
 .nav-links a[href="/login"]:hover {
   background: #4752C4;
-}
-
-/* Subtle styling for Privacy + TOS */
-.nav-links a[href="/privacy"],
-.nav-links a[href="/tos"] {
-  opacity: 0.85;
-  font-size: 0.95em;
-}
-
-.nav-links a[href="/privacy"]:hover,
-.nav-links a[href="/tos"]:hover {
-  opacity: 1;
 }
 
 /* BUTTONS */
