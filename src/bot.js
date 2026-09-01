@@ -50,6 +50,7 @@ function updateSetting(guildId, key, value) {
    ============================================================ */
 
 const app = express();
+app.use(express.static(path.join(__dirname, "website")));
 const PORT = process.env.PORT || 10000;
 
 // Serve homepage
