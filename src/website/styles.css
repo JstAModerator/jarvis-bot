@@ -1,100 +1,77 @@
-/* GLOBAL RESET */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
 body {
-  background: #1a1a1a;
-  color: white;
-  font-family: Arial, sans-serif;
+  background: #0a0a0f;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
 }
 
-/* LINKS */
-a {
-  color: #8366ff;
-  text-decoration: none;
-}
-
-a:hover {
-  color: #a48cff;
-}
-
-/* BUTTONS */
-.btn {
-  background: #6a4cff;
-  padding: 12px 20px;
-  border-radius: 10px;
-  color: white;
-  text-decoration: none;
-  font-size: 18px;
-  display: inline-block;
-  transition: 0.2s;
-}
-
-.btn:hover {
-  background: #8366ff;
-}
-
-/* NAVBAR */
 .navbar {
-  width: 100%;
-  padding: 15px 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 60px;
   background: #111;
+  position: sticky;
+  top: 0;
+}
+
+.btn-primary {
+  background: linear-gradient(90deg, #6a4cff, #8366ff);
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: #fff;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.btn-secondary {
+  background: #222;
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: #ccc;
+  text-decoration: none;
+}
+
+.hero {
   display: flex;
   align-items: center;
-  gap: 20px;
+  justify-content: space-between;
+  padding: 100px 60px;
 }
 
-.navbar img {
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
+.hero-image img {
+  width: 300px;
+  filter: drop-shadow(0 0 20px #6a4cff);
 }
 
-/* HERO SECTION */
-.hero {
-  text-align: center;
-  padding: 80px 20px;
-}
-
-.hero h1 {
-  font-size: 60px;
-  color: #8366ff;
-}
-
-.hero p {
-  font-size: 22px;
-  color: #ccc;
-  margin-top: 10px;
-}
-
-/* FEATURE CARDS */
 .features {
-  max-width: 900px;
-  margin: 40px auto;
-  padding: 20px;
+  text-align: center;
+  padding: 80px 60px;
 }
 
-.feature {
-  background: #222;
-  padding: 20px;
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 30px;
+  margin-top: 40px;
+}
+
+.feature-card {
+  background: #151515;
+  padding: 30px;
   border-radius: 12px;
-  margin-bottom: 20px;
   border-left: 4px solid #6a4cff;
 }
 
-.feature h2 {
-  margin-bottom: 10px;
-  color: #8366ff;
+.cta {
+  text-align: center;
+  padding: 80px 60px;
+  background: #111;
 }
 
-/* FOOTER */
 footer {
-  margin-top: 40px;
-  padding: 20px;
-  background: #111;
   text-align: center;
-  opacity: 0.8;
+  padding: 40px;
+  background: #0a0a0f;
+  color: #888;
 }
