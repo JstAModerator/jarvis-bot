@@ -37,16 +37,43 @@ body {
   display: flex;
   gap: 30px;
   list-style: none;
+  align-items: center;
 }
 
 .nav-links a {
   color: #8366ff;
   text-decoration: none;
   font-weight: 500;
+  transition: 0.3s ease;
 }
 
 .nav-links a:hover {
   color: #fff;
+}
+
+/* Make Login with Discord look like a button */
+.nav-links a[href="/login"] {
+  background: #5865F2;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.nav-links a[href="/login"]:hover {
+  background: #4752C4;
+}
+
+/* Subtle styling for Privacy + TOS */
+.nav-links a[href="/privacy"],
+.nav-links a[href="/tos"] {
+  opacity: 0.85;
+  font-size: 0.95em;
+}
+
+.nav-links a[href="/privacy"]:hover,
+.nav-links a[href="/tos"]:hover {
+  opacity: 1;
 }
 
 /* BUTTONS */
