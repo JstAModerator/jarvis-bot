@@ -42,8 +42,15 @@ tabs.forEach(tab => {
   });
 });
 
-// Placeholder: set user + uptime
-document.getElementById('userName').textContent = 'JarvisUser#1234';
+async function loadUser() {
+  const res = await fetch("/api/user");
+  const user = await res.json();
+
+  document.getElementById("userName").textContent =
+    `${user.username}#${user.discriminator}`;
+}
+
+loadUser();
 document.getElementById('uptime').textContent = '3h 21m';
 document.getElementById('ping').textContent = '42';
 

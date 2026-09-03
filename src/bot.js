@@ -143,6 +143,22 @@ app.get("/api/settings/:guildId", (req, res) => {
 /* ------------------------------
    API: Update settings
 ------------------------------ */
+// Fetch logged‑in user info
+app.get("/api/user", async (req, res) => {
+  const token = req.session.access_token;
+  if (!token) return res.json({ username: "Unknown" });
+
+  try {
+    const user = await fetch("https://discord.com/api/users/@me", {
+      headers: { Authorization: `Bearer ${token}` }
+    }).then(r => r.json());
+
+    res.json(user);
+  } catch (err) {
+    console.error("Failed to fetch user:", err);
+    res.status(500).json({ error: "Failed to fetch user" });
+  }
+});
 
 app.post("/api/update-settings/:guildId", (req, res) => {
   const guildId = req.params.guildId;
