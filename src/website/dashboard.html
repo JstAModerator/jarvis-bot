@@ -3,121 +3,164 @@
 <head>
   <meta charset="UTF-8">
   <title>Jarvis Dashboard</title>
-  <link rel="stylesheet" href="/styles.css">
-
-  <style>
-    .dashboard-container {
-      max-width: 800px;
-      margin: 40px auto;
-      background: #222;
-      padding: 30px;
-      border-radius: 12px;
-      text-align: left;
-    }
-
-    .dashboard-container h2 {
-      color: #8366ff;
-      margin-bottom: 20px;
-    }
-
-    .setting-group {
-      margin-bottom: 25px;
-    }
-
-    .setting-group label {
-      display: block;
-      margin-bottom: 8px;
-      font-size: 18px;
-    }
-
-    .setting-group input,
-    .setting-group select {
-      width: 100%;
-      padding: 10px;
-      border-radius: 8px;
-      border: none;
-      font-size: 16px;
-      background: #333;
-      color: white;
-    }
-
-    .save-btn {
-      background: #6a4cff;
-      padding: 12px 20px;
-      border-radius: 8px;
-      color: white;
-      font-size: 18px;
-      border: none;
-      cursor: pointer;
-      margin-top: 20px;
-    }
-
-    .save-btn:hover {
-      background: #8366ff;
-    }
-
-    #status {
-      margin-top: 20px;
-      font-size: 18px;
-    }
-  </style>
+  <link rel="stylesheet" href="/dashboard.css">
 </head>
-
 <body>
+  <div class="dashboard-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <img src="/images/jarvis-icon.png" alt="Jarvis Icon">
+        <h2>Jarvis Dashboard</h2>
+        <p class="user-tag">Logged in as: <span id="userName">User#0000</span></p>
+      </div>
 
-  <header>
-    <h1>Jarvis Dashboard</h1>
-    <p>Customize Jarvis for your server</p>
-  </header>
+      <div class="server-select">
+        <label for="serverSelect">Server</label>
+        <select id="serverSelect">
+          <option value="">Select a server...</option>
+          <!-- Fill with guilds via JS -->
+        </select>
+      </div>
 
-  <div class="dashboard-container">
+      <ul class="nav-tabs">
+        <li class="tab active" data-tab="server-settings">Server Settings</li>
+        <li class="tab" data-tab="xp-economy">XP & Economy</li>
+        <li class="tab" data-tab="moderation">Moderation</li>
+        <li class="tab" data-tab="fun-commands">Fun Commands</li>
+      </ul>
 
-    <h2>Server Settings</h2>
+      <div class="sidebar-footer">
+        <p>Jarvis v1.0 • Uptime: <span id="uptime">—</span></p>
+        <p>Ping: <span id="ping">— ms</span></p>
+      </div>
+    </aside>
 
-    <div class="setting-group">
-      <label>Embed Color (Hex)</label>
-      <input id="embedColor" placeholder="#6a4cff">
-    </div>
+    <!-- MAIN CONTENT -->
+    <main class="main-panel">
+      <!-- SERVER SETTINGS -->
+      <section id="server-settings" class="panel active">
+        <h1>Server Settings</h1>
+        <p class="panel-desc">Configure core behavior for Jarvis in this server.</p>
 
-    <div class="setting-group">
-      <label>Welcome Message</label>
-      <input id="welcomeMessage" placeholder="Welcome to the server!">
-    </div>
+        <div class="panel-grid">
+          <div class="panel-card">
+            <h3>Welcome Message</h3>
+            <textarea placeholder="Welcome to {server}, {user}!"></textarea>
+            <button>Save Welcome Message</button>
+          </div>
 
-    <div class="setting-group">
-      <label>Meme Source</label>
-      <select id="memeSource">
-        <option value="default">Default</option>
-        <option value="reddit">Reddit</option>
-      </select>
-    </div>
+          <div class="panel-card">
+            <h3>Embed Color</h3>
+            <input type="color" value="#8366ff">
+            <button>Save Embed Color</button>
+          </div>
 
-    <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+          <div class="panel-card">
+            <h3>Log Channel ID</h3>
+            <input type="text" placeholder="123456789012345678">
+            <button>Save Log Channel</button>
+          </div>
+        </div>
+      </section>
 
-    <p id="status"></p>
+      <!-- XP & ECONOMY -->
+      <section id="xp-economy" class="panel">
+        <h1>XP & Economy</h1>
+        <p class="panel-desc">Control leveling, rewards, and server economy.</p>
 
+        <div class="xp-section">
+          <div class="xp-header">
+            <h3>XP Preview</h3>
+            <p>Example user: Level 12</p>
+          </div>
+          <div class="xp-bar">
+            <div class="xp-fill" style="width: 65%;"></div>
+          </div>
+          <p class="xp-text">650 / 1000 XP to next level</p>
+        </div>
+
+        <div class="panel-grid">
+          <div class="panel-card">
+            <h3>XP per Message</h3>
+            <input type="number" value="10">
+            <button>Save XP Rate</button>
+          </div>
+
+          <div class="panel-card">
+            <h3>Level-Up Reward Role</h3>
+            <input type="text" placeholder="@Level 10 Role">
+            <button>Save Reward Role</button>
+          </div>
+
+          <div class="panel-card">
+            <h3>Currency Name</h3>
+            <input type="text" value="Credits">
+            <button>Save Currency</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- MODERATION -->
+      <section id="moderation" class="panel">
+        <h1>Moderation</h1>
+        <p class="panel-desc">Tune auto‑mod, filters, and punishments.</p>
+
+        <div class="panel-grid">
+          <div class="panel-card">
+            <h3>Auto‑Mod</h3>
+            <label><input type="checkbox"> Enable Auto‑Mod</label><br>
+            <label><input type="checkbox"> Block links</label><br>
+            <label><input type="checkbox"> Block spam</label>
+            <button>Save Auto‑Mod</button>
+          </div>
+
+          <div class="panel-card">
+            <h3>Mute Duration (minutes)</h3>
+            <input type="number" value="10">
+            <button>Save Mute Settings</button>
+          </div>
+
+          <div class="panel-card">
+            <h3>Ban Appeal Link</h3>
+            <input type="url" placeholder="https://yourserver.com/appeal">
+            <button>Save Appeal Link</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- FUN COMMANDS -->
+      <section id="fun-commands" class="panel">
+        <h1>Fun Commands</h1>
+        <p class="panel-desc">Customize memes, reactions, and playful features.</p>
+
+        <div class="panel-grid">
+          <div class="panel-card">
+            <h3>Meme Source</h3>
+            <select>
+              <option>Reddit</option>
+              <option>Local folder</option>
+              <option>Custom API</option>
+            </select>
+            <button>Save Meme Source</button>
+          </div>
+
+          <div class="panel-card">
+            <h3>Reaction Triggers</h3>
+            <textarea placeholder="hello -> 👋&#10;jarvis -> 🤖"></textarea>
+            <button>Save Reactions</button>
+          </div>
+
+          <div class="panel-card">
+            <h3>Custom Prefix</h3>
+            <input type="text" value="!">
+            <button>Save Prefix</button>
+          </div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <script>
-    async function saveSettings() {
-      const guildId = prompt("Enter your server ID:");
-
-      const body = {
-        embed_color: document.getElementById("embedColor").value,
-        welcome_message: document.getElementById("welcomeMessage").value,
-        meme_source: document.getElementById("memeSource").value
-      };
-
-      const res = await fetch(`/api/update-settings/${guildId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body)
-      });
-
-      document.getElementById("status").innerText =
-        res.ok ? "Settings saved!" : "Failed to save settings.";
-    }
-  </script>
-
+  <script src="/dashboard.js"></script>
 </body>
 </html>
