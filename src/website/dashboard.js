@@ -13,6 +13,7 @@ async function loadServers() {
 }
 
 loadServers();
+
 document.getElementById("serverSelect").addEventListener("change", async (e) => {
   const guildId = e.target.value;
 
@@ -42,15 +43,18 @@ tabs.forEach(tab => {
   });
 });
 
+// ⭐ Load real Discord user
 async function loadUser() {
   const res = await fetch("/api/user");
   const user = await res.json();
 
-  document.getElementById("userName").textContent =
-    `${user.username}#${user.discriminator}`;
+  const tag = user.discriminator ? `#${user.discriminator}` : "";
+  document.getElementById("userName").textContent = `${user.username}${tag}`;
 }
 
 loadUser();
+
+// Placeholder uptime + ping
 document.getElementById('uptime').textContent = '3h 21m';
 document.getElementById('ping').textContent = '42';
 

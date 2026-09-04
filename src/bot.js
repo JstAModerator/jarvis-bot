@@ -153,12 +153,17 @@ app.get("/api/user", async (req, res) => {
       headers: { Authorization: `Bearer ${token}` }
     }).then(r => r.json());
 
-    res.json(user);
+    // Handle new Discord format
+    const displayName = user.global_name || user.username;
+    const tag = user.discriminator ? `#${user.discriminator}` : "";
+
+    res.json({ username: displayName, discriminator: user.discriminator, tag });
   } catch (err) {
     console.error("Failed to fetch user:", err);
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
+
 
 app.post("/api/update-settings/:guildId", (req, res) => {
   const guildId = req.params.guildId;
