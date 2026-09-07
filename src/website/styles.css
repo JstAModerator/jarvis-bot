@@ -122,6 +122,38 @@ body {
   transform: translateY(-5px);
   border-left-color: #8366ff;
 }
+/* FEATURE CARD EXPAND ANIMATION */
+.feature-card {
+  background: #151515;
+  padding: 30px;
+  border-radius: 12px;
+  border-left: 4px solid #6a4cff;
+  transition: all 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+
+.feature-card:hover {
+  transform: scale(1.05);
+  border-left-color: #8366ff;
+  box-shadow: 0 0 25px rgba(106, 76, 255, 0.4);
+}
+
+/* Hidden extra info */
+.feature-card .extra-info {
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.4s ease;
+  color: #ccc;
+}
+
+/* Reveal on hover */
+.feature-card:hover .extra-info {
+  opacity: 1;
+  max-height: 200px;
+  margin-top: 12px;
+}
 
 /* CTA */
 .cta {
