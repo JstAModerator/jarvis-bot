@@ -7,6 +7,7 @@ import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
+import { loadCommands } from "./handlers/commandLoader.js"; // ⭐ ADDED
 
 dotenv.config();
 
@@ -143,7 +144,7 @@ app.get("/api/settings/:guildId", (req, res) => {
 /* ------------------------------
    API: Update settings
 ------------------------------ */
-// Fetch logged‑in user info
+
 app.get("/api/user", async (req, res) => {
   const token = req.session.access_token;
   if (!token) return res.json({ username: "Unknown" });
@@ -153,7 +154,6 @@ app.get("/api/user", async (req, res) => {
       headers: { Authorization: `Bearer ${token}` }
     }).then(r => r.json());
 
-    // Handle new Discord format
     const displayName = user.global_name || user.username;
     const tag = user.discriminator ? `#${user.discriminator}` : "";
 
@@ -211,24 +211,9 @@ client.on("guildCreate", (guild) => {
 async function onReady() {
   console.log(`Logged in as ${client.user.tag}`);
 
-  client.commands = new Map();
-
-  const commandsPath = path.join(__dirname, "commands");
-  const commandFiles = fs.readdirSync(commandsPath).filter((file) =>
-    file.endsWith(".js")
-  );
-
-  for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
-    const command = await import(filePath);
-
-    if ("data" in command && "execute" in command) {
-      client.commands.set(command.data.name, command.execute);
-      console.log(`✔ Loaded command: ${command.data.name}`);
-    } else {
-      console.log(`⚠ Skipped ${file} — missing data or execute`);
-    }
-  }
+  // ⭐ REMOVE your old command loader
+  // ⭐ ADD the new recursive loader:
+  await loadCommands(client); // ⭐ ADDED
 
   console.log("✅ Bot startup complete (commands loaded)");
 }
