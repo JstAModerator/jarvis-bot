@@ -1,4 +1,4 @@
-const {
+import {
   SlashCommandBuilder,
   PermissionFlagsBits,
   ChannelType,
@@ -7,9 +7,9 @@ const {
   ButtonBuilder,
   ButtonStyle,
   ComponentType,
-} = require("discord.js");
+} from "discord.js";
 
-module.exports = {
+export default {
   data: new SlashCommandBuilder()
     .setName("setup")
     .setDescription("Automatically sets up roles and channels for the server.")
