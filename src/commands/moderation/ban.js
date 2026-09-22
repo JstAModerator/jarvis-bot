@@ -1,152 +1,288 @@
-const {
+import {
   SlashCommandBuilder,
   EmbedBuilder,
   PermissionFlagsBits,
   ActionRowBuilder,
   ButtonBuilder,
-  ButtonStyle
-} = require("discord.js");
+  ButtonStyle,
+  ComponentType,
+} from "discord.js";
 
-const db = require("../../database"); // adjust path if needed
+import { getNextCaseId, getModlogChannel } from "../../database/moderation.js";
 
-module.exports = {
+// =====================================================
+// COMMAND
+// =====================================================
+
+const command = {
   data: new SlashCommandBuilder()
     .setName("ban")
     .setDescription("Ban a member from the server.")
-    .addUserOption(option =>
-      option.setName("user")
+
+    .addUserOption((option) =>
+      option
+        .setName("user")
         .setDescription("The user to ban.")
         .setRequired(true)
     )
-    .addStringOption(option =>
-      option.setName("reason")
+
+    .addStringOption((option) =>
+      option
+        .setName("reason")
         .setDescription("Reason for the ban.")
         .setRequired(false)
     )
-    .setDefaultMemberPermissions(PermissionFlagsBits.BanMembers),
+
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.BanMembers
+    ),
 
   async execute(interaction) {
-    const moderator = interaction.user;
     const guild = interaction.guild;
+    const moderator = interaction.user;
 
-    const target = interaction.options.getUser("user");
-    const reason = interaction.options.getString("reason") || "No reason provided.";
+    const target =
+      interaction.options.getUser("user");
 
-    // Check if target is bannable
-    const member = await guild.members.fetch(target.id).catch(() => null);
+    const reason =
+      interaction.options.getString("reason") ||
+      "No reason provided.";
+
+    // ===================================================
+    // FIND MEMBER
+    // ===================================================
+
+    const member = await guild.members
+      .fetch(target.id)
+      .catch(() => null);
+
     if (!member) {
       return interaction.reply({
-        content: "❌ I can't find that user in the server.",
-        ephemeral: true
+        content:
+          "❌ I can't find that user in the server.",
+        ephemeral: true,
       });
     }
+
+    // ===================================================
+    // PREVENT SELF BAN
+    // ===================================================
+
+    if (target.id === moderator.id) {
+      return interaction.reply({
+        content: "❌ You can't ban yourself.",
+        ephemeral: true,
+      });
+    }
+
+    // ===================================================
+    // CHECK IF JARVIS CAN BAN USER
+    // ===================================================
 
     if (!member.bannable) {
       return interaction.reply({
-        content: "❌ I cannot ban this user (role too high or insufficient permissions).",
-        ephemeral: true
+        content:
+          "❌ I cannot ban this user. Their role may be higher than Jarvis's role, or Jarvis may not have permission to ban them.",
+        ephemeral: true,
       });
     }
 
-    // Confirmation buttons
+    // ===================================================
+    // UNIQUE BUTTON IDs
+    // ===================================================
+
+    const confirmId = `confirm_ban_${interaction.id}`;
+    const cancelId = `cancel_ban_${interaction.id}`;
+
+    // ===================================================
+    // CONFIRMATION BUTTONS
+    // ===================================================
+
+    const confirmButton = new ButtonBuilder()
+      .setCustomId(confirmId)
+      .setLabel("Confirm Ban")
+      .setStyle(ButtonStyle.Danger);
+
+    const cancelButton = new ButtonBuilder()
+      .setCustomId(cancelId)
+      .setLabel("Cancel")
+      .setStyle(ButtonStyle.Secondary);
+
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId("confirm_ban")
-        .setLabel("Confirm Ban")
-        .setStyle(ButtonStyle.Danger),
-      new ButtonBuilder()
-        .setCustomId("cancel_ban")
-        .setLabel("Cancel")
-        .setStyle(ButtonStyle.Secondary)
+      confirmButton,
+      cancelButton
     );
+
+    // ===================================================
+    // CONFIRMATION EMBED
+    // ===================================================
 
     const confirmEmbed = new EmbedBuilder()
       .setTitle("🔨 Ban Confirmation")
-      .setDescription(`Are you sure you want to ban **${target.tag}**?\n\n**Reason:** ${reason}`)
-      .setColor("#ff4d4d");
+      .setDescription(
+        `Are you sure you want to ban **${target.tag}**?\n\n` +
+        `**Reason:** ${reason}`
+      )
+      .setColor("#ff4d4d")
+      .setFooter({
+        text: "This confirmation expires in 30 seconds.",
+      });
 
-    await interaction.reply({
+    const response = await interaction.reply({
       embeds: [confirmEmbed],
       components: [row],
-      ephemeral: true
+      ephemeral: true,
+      fetchReply: true,
     });
 
-    // Collector
-    const collector = interaction.channel.createMessageComponentCollector({
-      time: 30000
+    // ===================================================
+    // WAIT FOR BUTTON
+    // ===================================================
+
+    let buttonInteraction;
+
+    try {
+      buttonInteraction = await response.awaitMessageComponent({
+        componentType: ComponentType.Button,
+
+        filter: (button) =>
+          button.user.id === moderator.id &&
+          (button.customId === confirmId ||
+            button.customId === cancelId),
+
+        time: 30000,
+      });
+    } catch {
+      await interaction.editReply({
+        content: "⌛ Ban confirmation expired. No one was banned.",
+        embeds: [],
+        components: [],
+      });
+
+      return;
+    }
+
+    // ===================================================
+    // CANCEL
+    // ===================================================
+
+    if (buttonInteraction.customId === cancelId) {
+      await buttonInteraction.update({
+        content: "❌ Ban cancelled.",
+        embeds: [],
+        components: [],
+      });
+
+      return;
+    }
+
+    // ===================================================
+    // CONFIRMED
+    // ===================================================
+
+    await buttonInteraction.update({
+      content: `🔨 Banning **${target.tag}**...`,
+      embeds: [],
+      components: [],
     });
 
-    collector.on("collect", async (i) => {
-      if (i.user.id !== moderator.id) {
-        return i.reply({ content: "❌ This confirmation isn't for you.", ephemeral: true });
-      }
+    // ===================================================
+    // DM USER BEFORE BAN
+    // ===================================================
 
-      if (i.customId === "cancel_ban") {
-        return i.update({
-          content: "❌ Ban cancelled.",
-          embeds: [],
-          components: []
-        });
-      }
+    try {
+      const dmEmbed = new EmbedBuilder()
+        .setTitle(`🔨 You were banned from ${guild.name}`)
+        .addFields(
+          { name: "Reason", value: reason },
+          { name: "Moderator", value: moderator.tag }
+        )
+        .setColor("#ff4d4d")
+        .setTimestamp();
 
-      if (i.customId === "confirm_ban") {
-        // DM the user
+      await target.send({ embeds: [dmEmbed] });
+    } catch {
+      // User may have DMs disabled.
+      // Continue with the ban.
+    }
+
+    // ===================================================
+    // BAN USER
+    // ===================================================
+
+    try {
+      await member.ban({
+        reason: `${reason} | Moderator: ${moderator.tag}`,
+      });
+    } catch (error) {
+      console.error("BAN ERROR:", error);
+
+      await interaction.editReply({
+        content:
+          "❌ Jarvis couldn't ban that user. Check Jarvis's permissions and role position.",
+        embeds: [],
+        components: [],
+      });
+
+      return;
+    }
+
+    // ===================================================
+    // CASE ID (shared per-guild counter across all mod commands)
+    // ===================================================
+
+    const newCaseId = getNextCaseId(guild.id);
+
+    // ===================================================
+    // MODLOG
+    // ===================================================
+
+    const modlogChannelId = getModlogChannel(guild.id);
+
+    if (modlogChannelId) {
+      const logChannel = guild.channels.cache.get(modlogChannelId);
+
+      if (logChannel && logChannel.isTextBased()) {
         try {
-          const dmEmbed = new EmbedBuilder()
-            .setTitle(`🔨 You were banned from ${guild.name}`)
+          const logEmbed = new EmbedBuilder()
+            .setTitle("🔨 Ban Action")
+            .setColor("#ff4d4d")
             .addFields(
+              { name: "User", value: `${target.tag} (${target.id})` },
+              { name: "Moderator", value: `${moderator.tag} (${moderator.id})` },
               { name: "Reason", value: reason },
-              { name: "Moderator", value: moderator.tag }
+              { name: "Guild", value: guild.name }
             )
-            .setColor("#ff4d4d");
+            .setFooter({ text: `Case #${newCaseId}` })
+            .setTimestamp();
 
-          await target.send({ embeds: [dmEmbed] });
-        } catch (err) {
-          // DM failed — ignore
+          await logChannel.send({ embeds: [logEmbed] });
+        } catch (error) {
+          console.error("BAN MODLOG ERROR:", error);
         }
-
-        // Ban the user
-        await member.ban({ reason });
-
-        // Case ID system
-        let caseData = db.prepare("SELECT last_case_id FROM case_ids WHERE guild_id = ?").get(guild.id);
-        if (!caseData) {
-          db.prepare("INSERT INTO case_ids (guild_id, last_case_id) VALUES (?, ?)").run(guild.id, 0);
-          caseData = { last_case_id: 0 };
-        }
-
-        const newCaseId = caseData.last_case_id + 1;
-        db.prepare("UPDATE case_ids SET last_case_id = ? WHERE guild_id = ?").run(newCaseId, guild.id);
-
-        // Modlog channel
-        const modlog = db.prepare("SELECT channel_id FROM modlog_settings WHERE guild_id = ?").get(guild.id);
-        if (modlog && modlog.channel_id) {
-          const logChannel = guild.channels.cache.get(modlog.channel_id);
-
-          if (logChannel) {
-            const logEmbed = new EmbedBuilder()
-              .setTitle("🔨 Ban Action")
-              .setColor("#ff4d4d")
-              .addFields(
-                { name: "User", value: `${target.tag} (${target.id})` },
-                { name: "Moderator", value: `${moderator.tag} (${moderator.id})` },
-                { name: "Reason", value: reason },
-                { name: "Timestamp", value: new Date().toLocaleString() },
-                { name: "Guild", value: guild.name }
-              )
-              .setFooter({ text: `Case #${newCaseId}` });
-
-            await logChannel.send({ embeds: [logEmbed] });
-          }
-        }
-
-        // Final moderator response
-        return i.update({
-          content: `🔨 **${target.tag}** has been banned.`,
-          embeds: [],
-          components: []
-        });
       }
+    }
+
+    // ===================================================
+    // FINAL RESPONSE
+    // ===================================================
+
+    const successEmbed = new EmbedBuilder()
+      .setTitle("🔨 Member Banned")
+      .setColor("#ff4d4d")
+      .setDescription(`**${target.tag}** has been banned.`)
+      .addFields(
+        { name: "Reason", value: reason },
+        { name: "Case", value: `#${newCaseId}` }
+      )
+      .setTimestamp();
+
+    await interaction.editReply({
+      content: "",
+      embeds: [successEmbed],
+      components: [],
     });
-  }
+  },
 };
+
+export default command;

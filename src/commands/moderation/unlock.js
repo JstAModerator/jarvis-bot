@@ -1,28 +1,54 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+} from "discord.js";
 
-export const data = new SlashCommandBuilder()
-  .setName("unlock")
-  .setDescription("Unlock the current channel")
-  .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels);
+// =====================================================
+// COMMAND
+// =====================================================
 
-export async function execute(interaction) {
-  const channel = interaction.channel;
+const command = {
+  data: new SlashCommandBuilder()
+    .setName("unlock")
+    .setDescription("Unlock the current channel")
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.ManageChannels
+    ),
 
-  try {
-    await channel.permissionOverwrites.edit(
-      interaction.guild.roles.everyone,
-      { SendMessages: true }
-    );
+  async execute(interaction) {
+    const channel = interaction.channel;
+
+    // ===================================================
+    // UNLOCK CHANNEL
+    // ===================================================
+
+    try {
+      await channel.permissionOverwrites.edit(
+        interaction.guild.roles.everyone,
+        { SendMessages: true }
+      );
+    } catch (error) {
+      console.error(
+        "UNLOCK ERROR:",
+        error
+      );
+
+      return interaction.reply({
+        content:
+          "❌ I couldn't unlock this channel. Check my permissions.",
+        ephemeral: true,
+      });
+    }
+
+    // ===================================================
+    // SUCCESS
+    // ===================================================
 
     await interaction.reply({
       content: `🔓 Channel unlocked. Everyone can speak again.`,
-      ephemeral: false
+      ephemeral: false,
     });
-  } catch (err) {
-    console.error(err);
-    await interaction.reply({
-      content: "❌ I couldn't unlock this channel. Check my permissions.",
-      ephemeral: true
-    });
-  }
-}
+  },
+};
+
+export default command;

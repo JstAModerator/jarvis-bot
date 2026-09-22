@@ -1,28 +1,54 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from "discord.js";
+import {
+  SlashCommandBuilder,
+  PermissionFlagsBits,
+} from "discord.js";
 
-export const data = new SlashCommandBuilder()
-  .setName("lockdown")
-  .setDescription("Lock the current channel so only staff can speak")
-  .setDefaultMemberPermissions(PermissionFlagsBits.ManageChannels);
+// =====================================================
+// COMMAND
+// =====================================================
 
-export async function execute(interaction) {
-  const channel = interaction.channel;
+const command = {
+  data: new SlashCommandBuilder()
+    .setName("lockdown")
+    .setDescription("Lock the current channel so only staff can speak")
+    .setDefaultMemberPermissions(
+      PermissionFlagsBits.ManageChannels
+    ),
 
-  try {
-    await channel.permissionOverwrites.edit(
-      interaction.guild.roles.everyone,
-      { SendMessages: false }
-    );
+  async execute(interaction) {
+    const channel = interaction.channel;
+
+    // ===================================================
+    // LOCK CHANNEL
+    // ===================================================
+
+    try {
+      await channel.permissionOverwrites.edit(
+        interaction.guild.roles.everyone,
+        { SendMessages: false }
+      );
+    } catch (error) {
+      console.error(
+        "LOCKDOWN ERROR:",
+        error
+      );
+
+      return interaction.reply({
+        content:
+          "❌ I couldn't lock this channel. Check my permissions.",
+        ephemeral: true,
+      });
+    }
+
+    // ===================================================
+    // SUCCESS
+    // ===================================================
 
     await interaction.reply({
       content: `🔒 Channel locked. Only staff can speak.`,
-      ephemeral: false
+      ephemeral: false,
     });
-  } catch (err) {
-    console.error(err);
-    await interaction.reply({
-      content: "❌ I couldn't lock this channel. Check my permissions.",
-      ephemeral: true
-    });
-  }
-}
+  },
+};
+
+export default command;

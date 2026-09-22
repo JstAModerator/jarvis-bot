@@ -1,29 +1,25 @@
-const {
+import {
   SlashCommandBuilder,
   EmbedBuilder,
-  PermissionFlagsBits
-} = require("discord.js");
+  PermissionFlagsBits,
+} from "discord.js";
 
-const db = require("../../database");
+import { getNextCaseId, getModlogChannel } from "../../database/moderation.js";
 
-module.exports = {
+const MAX_TIMEOUT_MINUTES = 40320; // Discord's 28-day cap
+
+const command = {
   data: new SlashCommandBuilder()
     .setName("timeout")
     .setDescription("Timeout a user for a specific duration.")
-    .addUserOption(option =>
-      option.setName("user")
-        .setDescription("The user to timeout.")
-        .setRequired(true)
+    .addUserOption((option) =>
+      option.setName("user").setDescription("The user to timeout.").setRequired(true)
     )
-    .addIntegerOption(option =>
-      option.setName("minutes")
-        .setDescription("Duration in minutes.")
-        .setRequired(true)
+    .addIntegerOption((option) =>
+      option.setName("minutes").setDescription("Duration in minutes.").setRequired(true)
     )
-    .addStringOption(option =>
-      option.setName("reason")
-        .setDescription("Reason for the timeout.")
-        .setRequired(false)
+    .addStringOption((option) =>
+      option.setName("reason").setDescription("Reason for the timeout.").setRequired(false)
     )
     .setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
 
@@ -35,17 +31,38 @@ module.exports = {
     const minutes = interaction.options.getInteger("minutes");
     const reason = interaction.options.getString("reason") || "No reason provided.";
 
+    if (minutes < 1) {
+      return interaction.reply({
+        content: "❌ Duration must be at least **1 minute**.",
+        ephemeral: true,
+      });
+    }
+
+    if (minutes > MAX_TIMEOUT_MINUTES) {
+      return interaction.reply({
+        content: `❌ Duration can't exceed **${MAX_TIMEOUT_MINUTES} minutes** (28 days), which is Discord's max timeout length.`,
+        ephemeral: true,
+      });
+    }
+
     const member = await guild.members.fetch(target.id).catch(() => null);
     if (!member) {
+      return interaction.reply({ content: "❌ I can't find that user.", ephemeral: true });
+    }
+
+    if (target.id === moderator.id) {
+      return interaction.reply({ content: "❌ You can't time yourself out.", ephemeral: true });
+    }
+
+    if (!member.moderatable) {
       return interaction.reply({
-        content: "❌ I can't find that user.",
-        ephemeral: true
+        content: "❌ I cannot timeout this user. Their role may be higher than Jarvis's role, or Jarvis may not have permission.",
+        ephemeral: true,
       });
     }
 
     const ms = minutes * 60 * 1000;
 
-    // DM user
     try {
       const dmEmbed = new EmbedBuilder()
         .setTitle(`⏳ You were timed out in ${guild.name}`)
@@ -54,49 +71,55 @@ module.exports = {
           { name: "Reason", value: reason },
           { name: "Moderator", value: moderator.tag }
         )
-        .setColor("#4da6ff");
+        .setColor("#4da6ff")
+        .setTimestamp();
 
       await target.send({ embeds: [dmEmbed] });
     } catch {}
 
-    await member.timeout(ms, reason);
-
-    // Case ID
-    let caseData = db.prepare("SELECT last_case_id FROM case_ids WHERE guild_id = ?").get(guild.id);
-    if (!caseData) {
-      db.prepare("INSERT INTO case_ids (guild_id, last_case_id) VALUES (?, ?)").run(guild.id, 0);
-      caseData = { last_case_id: 0 };
+    try {
+      await member.timeout(ms, `${reason} | Moderator: ${moderator.tag}`);
+    } catch (error) {
+      console.error("TIMEOUT ERROR:", error);
+      return interaction.reply({
+        content: "❌ Jarvis couldn't timeout that user. Check Jarvis's permissions and role position.",
+        ephemeral: true,
+      });
     }
 
-    const newCaseId = caseData.last_case_id + 1;
-    db.prepare("UPDATE case_ids SET last_case_id = ? WHERE guild_id = ?").run(newCaseId, guild.id);
+    const newCaseId = getNextCaseId(guild.id);
 
-    // Modlog
-    const modlog = db.prepare("SELECT channel_id FROM modlog_settings WHERE guild_id = ?").get(guild.id);
-    if (modlog && modlog.channel_id) {
-      const logChannel = guild.channels.cache.get(modlog.channel_id);
+    const modlogChannelId = getModlogChannel(guild.id);
+    if (modlogChannelId) {
+      const logChannel = guild.channels.cache.get(modlogChannelId);
 
-      if (logChannel) {
-        const embed = new EmbedBuilder()
-          .setTitle("⏳ Timeout Action")
-          .setColor("#4da6ff")
-          .addFields(
-            { name: "User", value: `${target.tag} (${target.id})` },
-            { name: "Moderator", value: `${moderator.tag} (${moderator.id})` },
-            { name: "Duration", value: `${minutes} minutes` },
-            { name: "Reason", value: reason },
-            { name: "Timestamp", value: new Date().toLocaleString() },
-            { name: "Guild", value: guild.name }
-          )
-          .setFooter({ text: `Case #${newCaseId}` });
+      if (logChannel && logChannel.isTextBased()) {
+        try {
+          const logEmbed = new EmbedBuilder()
+            .setTitle("⏳ Timeout Action")
+            .setColor("#4da6ff")
+            .addFields(
+              { name: "User", value: `${target.tag} (${target.id})` },
+              { name: "Moderator", value: `${moderator.tag} (${moderator.id})` },
+              { name: "Duration", value: `${minutes} minutes` },
+              { name: "Reason", value: reason },
+              { name: "Guild", value: guild.name }
+            )
+            .setFooter({ text: `Case #${newCaseId}` })
+            .setTimestamp();
 
-        await logChannel.send({ embeds: [embed] });
+          await logChannel.send({ embeds: [logEmbed] });
+        } catch (error) {
+          console.error("TIMEOUT MODLOG ERROR:", error);
+        }
       }
     }
 
     return interaction.reply({
       content: `⏳ **${target.tag}** has been timed out for ${minutes} minutes.`,
-      ephemeral: true
+      ephemeral: true,
     });
-  }
+  },
 };
+
+export default command;

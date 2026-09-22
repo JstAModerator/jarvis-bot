@@ -13,16 +13,23 @@ const responses = [
   "Bro… what kinda question is that?"
 ];
 
-export const data = new SlashCommandBuilder()
-  .setName("8ball")
-  .setDescription("Ask Jarvis a question and get a random answer.")
-  .addStringOption(option =>
-    option.setName("question")
-      .setDescription("Your question")
-      .setRequired(true)
-  );
+const command = {
+  data: new SlashCommandBuilder()
+    .setName("8ball")
+    .setDescription("Ask Jarvis a question and get a random answer.")
+    .addStringOption((option) =>
+      option
+        .setName("question")
+        .setDescription("Your question")
+        .setRequired(true)
+    ),
 
-export async function execute(interaction) {
-  const answer = responses[Math.floor(Math.random() * responses.length)];
-  await interaction.reply(`🎱 **${answer}**`);
-}
+  async execute(interaction) {
+    const answer =
+      responses[Math.floor(Math.random() * responses.length)];
+
+    await interaction.reply(`🎱 **${answer}**`);
+  },
+};
+
+export default command;
