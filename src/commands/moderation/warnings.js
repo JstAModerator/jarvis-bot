@@ -81,18 +81,25 @@ const command = {
     }
 
     // ===================================================
-    // BUILD LIST (with a cap so it doesn't blow past Discord's 4096-char embed description limit)
+    // BUILD LIST (capped so it doesn't blow past Discord's 4096-char embed description limit)
     // ===================================================
 
     const MAX_SHOWN = 15;
     const shown = rows.slice(0, MAX_SHOWN);
 
     let list = shown
-      .map(
-        (w, i) =>
-          `**${i + 1}.** ${new Date(w.timestamp).toLocaleString()} — ${w.reason} *(by <@${w.moderator_id}>)*`
-      )
-      .join("\n");
+      .map((w) => {
+        const caseLabel =
+          w.case_id != null
+            ? `Case #${w.case_id}`
+            : "Case #—"; // older warnings saved before case tracking was added
+
+        return (
+          `**${caseLabel}** — ${new Date(w.timestamp).toLocaleString()}\n` +
+          `${w.reason} *(by <@${w.moderator_id}>)*`
+        );
+      })
+      .join("\n\n");
 
     if (rows.length > MAX_SHOWN) {
       list += `\n\n*...and ${rows.length - MAX_SHOWN} more not shown.*`;

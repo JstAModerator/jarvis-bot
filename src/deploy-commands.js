@@ -14,21 +14,45 @@ dotenv.config({
   override: true,
 });
 
-// Auto-load commands
+// =====================================================
+// RECURSIVELY COLLECT ALL .js FILES UNDER commands/
+// =====================================================
+
+function getCommandFiles(dir) {
+  let results = [];
+
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      results = results.concat(getCommandFiles(fullPath));
+    } else if (entry.isFile() && entry.name.endsWith(".js")) {
+      results.push(fullPath);
+    }
+  }
+
+  return results;
+}
+
 const commandsPath = path.join(__dirname, "commands");
-const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith(".js"));
+const commandFilePaths = getCommandFiles(commandsPath);
 
 const commands = [];
 
-for (const file of commandFiles) {
-  const filePath = path.join(commandsPath, file);
-  const command = await import(filePath);
+for (const filePath of commandFilePaths) {
+  const imported = await import(filePath);
 
-  if ("data" in command && "execute" in command) {
+  // Support both `export default command` and
+  // named `export const data` / `export function execute`
+  const command = imported.default ?? imported;
+
+  if (command?.data && command?.execute) {
     commands.push(command.data.toJSON());
     console.log(`✔ Loaded command: ${command.data.name}`);
   } else {
-    console.log(`⚠ Skipped ${file} — missing data or execute`);
+    console.log(`⚠ Skipped ${path.relative(commandsPath, filePath)} — missing data or execute`);
   }
 }
 
@@ -43,7 +67,6 @@ async function deploy() {
     console.log("Registering slash commands...");
 
     if (isProduction) {
-      // 🧹 Clean guild commands to prevent duplicates
       const existingGuildCommands = await rest.get(
         Routes.applicationGuildCommands(process.env.CLIENT_ID, process.env.GUILD_ID)
       );
@@ -61,14 +84,12 @@ async function deploy() {
         }
       }
 
-      // 🌍 Deploy GLOBAL commands (Render)
       await rest.put(
         Routes.applicationCommands(process.env.CLIENT_ID),
         { body: commands }
       );
       console.log("🌍 Global commands deployed (Render)");
     } else {
-      // 🛠 Deploy GUILD commands (Local dev)
       await rest.put(
         Routes.applicationGuildCommands(
           process.env.CLIENT_ID,

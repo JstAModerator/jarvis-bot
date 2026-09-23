@@ -1,5 +1,6 @@
 import {
   SlashCommandBuilder,
+  EmbedBuilder,
   PermissionFlagsBits,
 } from "discord.js";
 
@@ -7,8 +8,10 @@ import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
 
+import { getNextCaseId, getModlogChannel } from "../../database/moderation.js";
+
 // =====================================================
-// DATABASE
+// DATABASE (warning records stay in their own db)
 // =====================================================
 
 const __filename = fileURLToPath(import.meta.url);
@@ -21,14 +24,14 @@ const dbPath = path.join(
 
 const db = new Database(dbPath);
 
-// Create warnings table if it doesn't exist
 db.prepare(`
   CREATE TABLE IF NOT EXISTS warnings (
     guild_id TEXT,
     user_id TEXT,
     moderator_id TEXT,
     reason TEXT,
-    timestamp INTEGER
+    timestamp INTEGER,
+    case_id INTEGER
   )
 `).run();
 
@@ -59,6 +62,9 @@ const command = {
     ),
 
   async execute(interaction) {
+    const guild = interaction.guild;
+    const moderator = interaction.user;
+
     const user =
       interaction.options.getUser("user");
 
@@ -69,12 +75,18 @@ const command = {
     // PREVENT SELF WARNING
     // ===================================================
 
-    if (user.id === interaction.user.id) {
+    if (user.id === moderator.id) {
       return interaction.reply({
         content: "❌ You can't warn yourself.",
         ephemeral: true,
       });
     }
+
+    // ===================================================
+    // CASE ID (shared per-guild counter across all mod commands)
+    // ===================================================
+
+    const newCaseId = getNextCaseId(guild.id);
 
     // ===================================================
     // SAVE WARNING
@@ -87,15 +99,17 @@ const command = {
           user_id,
           moderator_id,
           reason,
-          timestamp
+          timestamp,
+          case_id
         )
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?)
       `).run(
-        interaction.guild.id,
+        guild.id,
         user.id,
-        interaction.user.id,
+        moderator.id,
         reason,
-        Date.now()
+        Date.now(),
+        newCaseId
       );
     } catch (error) {
       console.error(
@@ -104,10 +118,44 @@ const command = {
       );
 
       return interaction.reply({
-        content:
-          "❌ Jarvis couldn't save that warning.",
+        content: "❌ Jarvis couldn't save that warning.",
         ephemeral: true,
       });
+    }
+
+    // ===================================================
+    // MODLOG
+    // ===================================================
+
+    const modlogChannelId = getModlogChannel(guild.id);
+
+    if (modlogChannelId) {
+      const logChannel = guild.channels.cache.get(
+        modlogChannelId
+      );
+
+      if (logChannel && logChannel.isTextBased()) {
+        try {
+          const logEmbed = new EmbedBuilder()
+            .setTitle("⚠️ Warn Action")
+            .setColor("#ffcc4d")
+            .addFields(
+              { name: "User", value: `${user.tag} (${user.id})` },
+              { name: "Moderator", value: `${moderator.tag} (${moderator.id})` },
+              { name: "Reason", value: reason },
+              { name: "Guild", value: guild.name }
+            )
+            .setFooter({ text: `Case #${newCaseId}` })
+            .setTimestamp();
+
+          await logChannel.send({ embeds: [logEmbed] });
+        } catch (error) {
+          console.error(
+            "WARN MODLOG ERROR:",
+            error
+          );
+        }
+      }
     }
 
     // ===================================================
@@ -117,7 +165,7 @@ const command = {
     await interaction.reply({
       content:
         `⚠️ **${user.tag}** has been warned.\n` +
-        `Reason: **${reason}**`,
+        `Reason: **${reason}** *(Case #${newCaseId})*`,
       ephemeral: false,
     });
   },
