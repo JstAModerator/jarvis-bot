@@ -10,6 +10,14 @@ import { loadCommands } from "./handlers/commandLoader.js"; // ⭐ ADDED
 
 dotenv.config();
 
+process.on("unhandledRejection", (error) => {
+  console.error("UNHANDLED REJECTION:", error);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("UNCAUGHT EXCEPTION:", error);
+});
+
 // Resolve directory
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

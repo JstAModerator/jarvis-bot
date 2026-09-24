@@ -159,123 +159,134 @@ const command = {
     });
 
     collector.on("collect", async (i) => {
-      if (i.user.id !== interaction.user.id) {
-        return i.reply({
-          content: "This menu isn't for you.",
-          ephemeral: true,
-        });
-      }
-
-      // Refresh button
-      if (i.customId === "refresh_settings") {
-        const fresh = getSettings(guildId);
-        return i.update({
-          embeds: [buildEmbed(interaction.guild, fresh)],
-          components: [buttons, dropdown],
-        });
-      }
-
-      // Dropdown actions
-      if (i.customId === "settings_menu") {
-        const choice = i.values[0];
-
-        if (choice === "embed_color") {
-          await i.reply({
-            content: "Send the new embed color (hex code, e.g. `#8366ff`).",
+      try {
+        if (i.user.id !== interaction.user.id) {
+          return i.reply({
+            content: "This menu isn't for you.",
             ephemeral: true,
           });
-
-          const msgCollector = interaction.channel.createMessageCollector({
-            filter: (m) => m.author.id === interaction.user.id,
-            time: 30000,
-            max: 1,
-          });
-
-          msgCollector.on("collect", (msg) => {
-            db.prepare(`
-              UPDATE server_settings
-              SET embed_color = ?
-              WHERE guild_id = ?
-            `).run(msg.content, guildId);
-
-            i.followUp({ content: "Embed color updated!", ephemeral: true });
-          });
-
-          return;
         }
 
-        if (choice === "welcome_message") {
+        // Refresh button
+        if (i.customId === "refresh_settings") {
+          const fresh = getSettings(guildId);
+          return i.update({
+            embeds: [buildEmbed(interaction.guild, fresh)],
+            components: [buttons, dropdown],
+          });
+        }
+
+        // Dropdown actions
+        if (i.customId === "settings_menu") {
+          const choice = i.values[0];
+
+          if (choice === "embed_color") {
+            await i.reply({
+              content: "Send the new embed color (hex code, e.g. `#8366ff`).",
+              ephemeral: true,
+            });
+
+            const msgCollector = interaction.channel.createMessageCollector({
+              filter: (m) => m.author.id === interaction.user.id,
+              time: 30000,
+              max: 1,
+            });
+
+            msgCollector.on("collect", (msg) => {
+              db.prepare(`
+                UPDATE server_settings
+                SET embed_color = ?
+                WHERE guild_id = ?
+              `).run(msg.content, guildId);
+
+              i.followUp({ content: "Embed color updated!", ephemeral: true });
+            });
+
+            return;
+          }
+
+          if (choice === "welcome_message") {
+            await i.reply({
+              content: "Send the new welcome message.",
+              ephemeral: true,
+            });
+
+            const msgCollector = interaction.channel.createMessageCollector({
+              filter: (m) => m.author.id === interaction.user.id,
+              time: 30000,
+              max: 1,
+            });
+
+            msgCollector.on("collect", (msg) => {
+              db.prepare(`
+                UPDATE server_settings
+                SET welcome_message = ?
+                WHERE guild_id = ?
+              `).run(msg.content, guildId);
+
+              i.followUp({ content: "Welcome message updated!", ephemeral: true });
+            });
+
+            return;
+          }
+
+          if (choice === "meme_source") {
+            await i.reply({
+              content: "Choose a meme source: `reddit`, `imgur`, or `tenor`.",
+              ephemeral: true,
+            });
+
+            const msgCollector = interaction.channel.createMessageCollector({
+              filter: (m) => m.author.id === interaction.user.id,
+              time: 30000,
+              max: 1,
+            });
+
+            msgCollector.on("collect", (msg) => {
+              db.prepare(`
+                UPDATE server_settings
+                SET meme_source = ?
+                WHERE guild_id = ?
+              `).run(msg.content.toLowerCase(), guildId);
+
+              i.followUp({ content: "Meme source updated!", ephemeral: true });
+            });
+
+            return;
+          }
+
+          if (choice === "xp_toggle") {
+            const current = getSettings(guildId);
+
+            db.prepare(`
+              UPDATE server_settings
+              SET xp_enabled = ?
+              WHERE guild_id = ?
+            `).run(current.xp_enabled ? 0 : 1, guildId);
+
+            return i.reply({ content: "XP system toggled!", ephemeral: true });
+          }
+
+          if (choice === "economy_toggle") {
+            const current = getSettings(guildId);
+
+            db.prepare(`
+              UPDATE server_settings
+              SET economy_enabled = ?
+              WHERE guild_id = ?
+            `).run(current.economy_enabled ? 0 : 1, guildId);
+
+            return i.reply({ content: "Economy toggled!", ephemeral: true });
+          }
+        }
+      } catch (error) {
+        console.error("SETTINGS COLLECTOR ERROR:", error);
+
+        if (!i.replied && !i.deferred) {
           await i.reply({
-            content: "Send the new welcome message.",
+            content: "❌ Something went wrong handling that.",
             ephemeral: true,
-          });
-
-          const msgCollector = interaction.channel.createMessageCollector({
-            filter: (m) => m.author.id === interaction.user.id,
-            time: 30000,
-            max: 1,
-          });
-
-          msgCollector.on("collect", (msg) => {
-            db.prepare(`
-              UPDATE server_settings
-              SET welcome_message = ?
-              WHERE guild_id = ?
-            `).run(msg.content, guildId);
-
-            i.followUp({ content: "Welcome message updated!", ephemeral: true });
-          });
-
-          return;
-        }
-
-        if (choice === "meme_source") {
-          await i.reply({
-            content: "Choose a meme source: `reddit`, `imgur`, or `tenor`.",
-            ephemeral: true,
-          });
-
-          const msgCollector = interaction.channel.createMessageCollector({
-            filter: (m) => m.author.id === interaction.user.id,
-            time: 30000,
-            max: 1,
-          });
-
-          msgCollector.on("collect", (msg) => {
-            db.prepare(`
-              UPDATE server_settings
-              SET meme_source = ?
-              WHERE guild_id = ?
-            `).run(msg.content.toLowerCase(), guildId);
-
-            i.followUp({ content: "Meme source updated!", ephemeral: true });
-          });
-
-          return;
-        }
-
-        if (choice === "xp_toggle") {
-          const current = getSettings(guildId);
-
-          db.prepare(`
-            UPDATE server_settings
-            SET xp_enabled = ?
-            WHERE guild_id = ?
-          `).run(current.xp_enabled ? 0 : 1, guildId);
-
-          return i.reply({ content: "XP system toggled!", ephemeral: true });
-        }
-
-        if (choice === "economy_toggle") {
-          const current = getSettings(guildId);
-
-          db.prepare(`
-            UPDATE server_settings
-            SET economy_enabled = ?
-            WHERE guild_id = ?
-          `).run(current.economy_enabled ? 0 : 1, guildId);
-
-          return i.reply({ content: "Economy toggled!", ephemeral: true });
+          }).catch(() => {});
         }
       }
     });
