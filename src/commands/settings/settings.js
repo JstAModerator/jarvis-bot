@@ -101,7 +101,6 @@ function buildEmbed(guild, settings) {
 function buildButtons() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
-      .setCustomId("open_dashboard")
       .setLabel("Open Dashboard")
       .setStyle(ButtonStyle.Link)
       .setURL("https://jarvis-bot-fod2.onrender.com/dashboard"),
