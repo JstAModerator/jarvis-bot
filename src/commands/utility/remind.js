@@ -1,18 +1,8 @@
 import { SlashCommandBuilder } from "discord.js";
 
-export const data = new SlashCommandBuilder()
-  .setName("remind")
-  .setDescription("Set a reminder that will DM you.")
-  .addStringOption(option =>
-    option.setName("time")
-      .setDescription("Time until reminder (e.g., 10s, 5m, 2h)")
-      .setRequired(true)
-  )
-  .addStringOption(option =>
-    option.setName("message")
-      .setDescription("Reminder message")
-      .setRequired(true)
-  );
+// =====================================================
+// HELPERS
+// =====================================================
 
 function parseTime(input) {
   const match = input.match(/(\d+)(s|m|h)/);
@@ -28,22 +18,50 @@ function parseTime(input) {
   return null;
 }
 
-export async function execute(interaction) {
-  const timeInput = interaction.options.getString("time");
-  const message = interaction.options.getString("message");
+// =====================================================
+// COMMAND
+// =====================================================
 
-  const ms = parseTime(timeInput);
-  if (!ms) {
-    return interaction.reply("❌ Invalid time format. Use **10s**, **5m**, or **2h**.");
-  }
+const command = {
+  data: new SlashCommandBuilder()
+    .setName("remind")
+    .setDescription("Set a reminder that will DM you.")
 
-  await interaction.reply(`⏳ Reminder set! I’ll DM you in **${timeInput}**.`);
+    .addStringOption((option) =>
+      option
+        .setName("time")
+        .setDescription("Time until reminder (e.g., 10s, 5m, 2h)")
+        .setRequired(true)
+    )
 
-  setTimeout(async () => {
-    try {
-      await interaction.user.send(`🔔 **Reminder:** ${message}`);
-    } catch {
-      await interaction.followUp("⚠️ I couldn't DM you. Your DMs might be closed.");
+    .addStringOption((option) =>
+      option
+        .setName("message")
+        .setDescription("Reminder message")
+        .setRequired(true)
+    ),
+
+  async execute(interaction) {
+    const timeInput = interaction.options.getString("time");
+    const message = interaction.options.getString("message");
+
+    const ms = parseTime(timeInput);
+    if (!ms) {
+      return interaction.reply(
+        "❌ Invalid time format. Use **10s**, **5m**, or **2h**."
+      );
     }
-  }, ms);
-}
+
+    await interaction.reply(`⏳ Reminder set! I'll DM you in **${timeInput}**.`);
+
+    setTimeout(async () => {
+      try {
+        await interaction.user.send(`🔔 **Reminder:** ${message}`);
+      } catch {
+        await interaction.followUp("⚠️ I couldn't DM you. Your DMs might be closed.");
+      }
+    }, ms);
+  },
+};
+
+export default command;
