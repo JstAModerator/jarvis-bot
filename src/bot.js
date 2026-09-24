@@ -235,7 +235,7 @@ client.on("interactionCreate", async (interaction) => {
   }
 
   try {
-    await executor(interaction);
+    await executor.execute(interaction);
   } catch (error) {
     console.error(error);
     try {

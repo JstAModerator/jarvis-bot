@@ -44,8 +44,6 @@ const commands = [];
 for (const filePath of commandFilePaths) {
   const imported = await import(filePath);
 
-  // Support both `export default command` and
-  // named `export const data` / `export function execute`
   const command = imported.default ?? imported;
 
   if (command?.data && command?.execute) {
