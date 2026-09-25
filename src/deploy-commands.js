@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { REST, Routes } from "discord.js";
 import dotenv from "dotenv";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 // Resolve directory
 const __filename = fileURLToPath(import.meta.url);
@@ -36,31 +36,35 @@ function getCommandFiles(dir) {
   return results;
 }
 
-const commandsPath = path.join(__dirname, "commands");
-const commandFilePaths = getCommandFiles(commandsPath);
+// =====================================================
+// EXPORTED DEPLOY FUNCTION
+// =====================================================
 
-const commands = [];
+export async function deployCommands() {
+  const commandsPath = path.join(__dirname, "commands");
+  const commandFilePaths = getCommandFiles(commandsPath);
 
-for (const filePath of commandFilePaths) {
-  const imported = await import(filePath);
+  const commands = [];
 
-  const command = imported.default ?? imported;
+  for (const filePath of commandFilePaths) {
+    const imported = await import(pathToFileURL(filePath).href);
 
-  if (command?.data && command?.execute) {
-    commands.push(command.data.toJSON());
-    console.log(`✔ Loaded command: ${command.data.name}`);
-  } else {
-    console.log(`⚠ Skipped ${path.relative(commandsPath, filePath)} — missing data or execute`);
+    const command = imported.default ?? imported;
+
+    if (command?.data && command?.execute) {
+      commands.push(command.data.toJSON());
+      console.log(`✔ Loaded command: ${command.data.name}`);
+    } else {
+      console.log(`⚠ Skipped ${path.relative(commandsPath, filePath)} — missing data or execute`);
+    }
   }
-}
 
-// REST client
-const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
+  // REST client
+  const rest = new REST({ version: "10" }).setToken(process.env.DISCORD_TOKEN);
 
-// Detect environment
-const isProduction = process.env.NODE_ENV === "production";
+  // Detect environment
+  const isProduction = process.env.NODE_ENV === "production";
 
-async function deploy() {
   try {
     console.log("Registering slash commands...");
 
@@ -104,4 +108,13 @@ async function deploy() {
   }
 }
 
-deploy();
+// =====================================================
+// STANDALONE RUN
+// Only auto-runs deployCommands() if this file is executed
+// directly (e.g. `node src/deploy-commands.js`), not when
+// it's imported by bot.js.
+// =====================================================
+
+if (import.meta.url === pathToFileURL(process.argv[1]).href) {
+  deployCommands();
+}

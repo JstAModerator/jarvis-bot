@@ -7,6 +7,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import { loadCommands } from "./handlers/commandLoader.js"; // ⭐ ADDED
+import { deployCommands } from "./deploy-commands.js"; // ⭐ ADDED
 
 dotenv.config();
 
@@ -218,8 +219,7 @@ client.on("guildCreate", (guild) => {
 async function onReady() {
   console.log(`Logged in as ${client.user.tag}`);
 
-  // ⭐ REMOVE your old command loader
-  // ⭐ ADD the new recursive loader:
+  await deployCommands();      
   await loadCommands(client); // ⭐ ADDED
 
   console.log("✅ Bot startup complete (commands loaded)");
