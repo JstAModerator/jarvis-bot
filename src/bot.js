@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import Database from "better-sqlite3";
 import { loadCommands } from "./handlers/commandLoader.js"; // ⭐ ADDED
 import { deployCommands } from "./deploy-commands.js"; // ⭐ ADDED
+import { registerXpHandlers } from "./handlers/xpHandler.js"; // ⭐ ADDED
 
 dotenv.config();
 
@@ -208,7 +209,11 @@ setInterval(() => {
    ============================================================ */
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,   // ⭐ ADDED — needed for messageCreate
+    GatewayIntentBits.GuildVoiceStates, // ⭐ ADDED — needed for voice XP
+  ],
 });
 
 client.on("guildCreate", (guild) => {
@@ -221,8 +226,9 @@ async function onReady() {
 
   await deployCommands();      
   await loadCommands(client); // ⭐ ADDED
+registerXpHandlers(client); // ⭐ ADDED
 
-  console.log("✅ Bot startup complete (commands loaded)");
+  console.log("✅ Bot startup complete (commands loaded + deployed)");
 }
 
 client.once("clientReady", onReady);
