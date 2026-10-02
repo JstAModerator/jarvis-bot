@@ -176,3 +176,67 @@ export function getRoleForLevel(guildId, level) {
 
   return row ? row.role_id : null;
 }
+// =====================================================
+// MANUAL XP ADJUSTMENT (for /xp set|add|remove)
+// =====================================================
+
+export function setXP(guildId, userId, newXp) {
+  getUser(guildId, userId); // ensures a row exists
+
+  const clamped = Math.max(0, newXp);
+
+  db.prepare(`
+    UPDATE xp_users
+    SET xp = ?
+    WHERE guild_id = ? AND user_id = ?
+  `).run(clamped, guildId, userId);
+
+  return clamped;
+}
+
+// =====================================================
+// CHANNEL BLACKLIST (for /xpconfig)
+// =====================================================
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS xp_channel_blacklist (
+    guild_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL,
+    PRIMARY KEY (guild_id, channel_id)
+  );
+`);
+
+export function blacklistChannel(guildId, channelId) {
+  db.prepare(`
+    INSERT OR IGNORE INTO xp_channel_blacklist (guild_id, channel_id)
+    VALUES (?, ?)
+  `).run(guildId, channelId);
+}
+
+export function unblacklistChannel(guildId, channelId) {
+  db.prepare(`
+    DELETE FROM xp_channel_blacklist
+    WHERE guild_id = ? AND channel_id = ?
+  `).run(guildId, channelId);
+}
+
+export function isChannelBlacklisted(guildId, channelId) {
+  const row = db
+    .prepare(`
+      SELECT 1 FROM xp_channel_blacklist
+      WHERE guild_id = ? AND channel_id = ?
+    `)
+    .get(guildId, channelId);
+
+  return !!row;
+}
+
+export function getBlacklistedChannels(guildId) {
+  return db
+    .prepare(`
+      SELECT channel_id FROM xp_channel_blacklist
+      WHERE guild_id = ?
+    `)
+    .all(guildId)
+    .map((row) => row.channel_id);
+}

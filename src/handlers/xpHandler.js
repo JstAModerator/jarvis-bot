@@ -7,6 +7,7 @@ import {
   addXP,
   setLastMessageTime,
   getRoleForLevel,
+  isChannelBlacklisted,
 } from "../database/xp.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -14,7 +15,6 @@ const __dirname = path.dirname(__filename);
 
 // =====================================================
 // READ-ONLY: is XP enabled for this guild?
-// Reads the same settings.db your /settings command writes to.
 // =====================================================
 
 const settingsDbPath = path.join(__dirname, "..", "database", "settings.db");
@@ -26,9 +26,9 @@ function isXpEnabled(guildId) {
       .prepare(`SELECT xp_enabled FROM server_settings WHERE guild_id = ?`)
       .get(guildId);
 
-    return row ? !!row.xp_enabled : true; // default ON if no settings row yet
+    return row ? !!row.xp_enabled : true;
   } catch {
-    return true; // table may not exist yet if /settings hasn't run once
+    return true;
   }
 }
 
@@ -36,12 +36,12 @@ function isXpEnabled(guildId) {
 // CONFIG
 // =====================================================
 
-const MESSAGE_COOLDOWN_MS = 60000; // 1 minute between XP-earning messages
+const MESSAGE_COOLDOWN_MS = 60000;
 const MESSAGE_XP_MIN = 15;
 const MESSAGE_XP_MAX = 25;
 
-const VOICE_XP_AMOUNT = 8;          // XP per interval tick while in voice
-const VOICE_XP_INTERVAL_MS = 60000; // check voice channels every 60s
+const VOICE_XP_AMOUNT = 8;
+const VOICE_XP_INTERVAL_MS = 60000;
 
 function randomMessageXp() {
   return Math.floor(
@@ -50,23 +50,11 @@ function randomMessageXp() {
 }
 
 // =====================================================
-// SHARED LEVEL-UP HANDLING
+// ROLE REWARDS (exported so /xp set|add|remove can reuse it)
 // =====================================================
 
-async function handleLevelUp(member, channel, result) {
-  if (!result.leveledUp) return;
-
-  const announceChannel =
-    channel && channel.isTextBased() ? channel : member.guild.systemChannel;
-
-  if (announceChannel) {
-    announceChannel
-      .send(`🎉 ${member} leveled up to **Level ${result.newLevel}**!`)
-      .catch(() => {});
-  }
-
-  // Assign any configured role rewards for every level crossed
-  for (let lvl = result.oldLevel + 1; lvl <= result.newLevel; lvl++) {
+export async function syncLevelRoles(member, oldLevel, newLevel) {
+  for (let lvl = oldLevel + 1; lvl <= newLevel; lvl++) {
     const roleId = getRoleForLevel(member.guild.id, lvl);
     if (!roleId) continue;
 
@@ -81,6 +69,21 @@ async function handleLevelUp(member, channel, result) {
   }
 }
 
+async function handleLevelUp(member, channel, result) {
+  if (!result.leveledUp) return;
+
+  const announceChannel =
+    channel && channel.isTextBased() ? channel : member.guild.systemChannel;
+
+  if (announceChannel) {
+    announceChannel
+      .send(`🎉 ${member} leveled up to **Level ${result.newLevel}**!`)
+      .catch(() => {});
+  }
+
+  await syncLevelRoles(member, result.oldLevel, result.newLevel);
+}
+
 // =====================================================
 // MESSAGE XP
 // =====================================================
@@ -91,6 +94,7 @@ function registerMessageXp(client) {
       if (message.author.bot) return;
       if (!message.guild) return;
       if (!isXpEnabled(message.guild.id)) return;
+      if (isChannelBlacklisted(message.guild.id, message.channel.id)) return;
 
       const guildId = message.guild.id;
       const userId = message.author.id;
@@ -137,9 +141,8 @@ function registerVoiceXp(client) {
         if (!member || member.user.bot) continue;
         if (!voiceState.channelId) continue;
         if (voiceState.channelId === afkChannelId) continue;
+        if (isChannelBlacklisted(guild.id, voiceState.channelId)) continue;
 
-        // Require at least one other human in the channel,
-        // so people can't just sit alone to farm XP.
         const channel = voiceState.channel;
         const humanCount =
           channel?.members?.filter((m) => !m.user.bot).size ?? 0;
