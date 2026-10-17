@@ -2,121 +2,307 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Jarvis Bot</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Jarvis is an all-in-one Discord bot built to power your server.">
+  <title>Jarvis | Discord Bot</title>
   <link rel="stylesheet" href="/styles.css">
 </head>
+
 <body>
 
   <!-- NAVBAR -->
   <nav class="navbar">
-    <div class="logo">
+    <a href="/" class="logo">
       <img src="/images/jarvis-icon.png" alt="Jarvis Icon">
       <span>JARVIS</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/tos">Terms</a>
+
+      <a
+        class="discord-login"
+        href="https://discord.com/oauth2/authorize?client_id=1540030654425731125&redirect_uri=https%3A%2F%2Fjarvis-bot-fod2.onrender.com%2Fauth%2Fdiscord&response_type=code&scope=identify%20guilds"
+      >
+        Login with Discord
+      </a>
     </div>
-
-    <ul class="nav-links">
-      <li>
-  <a href="https://discord.com/oauth2/authorize?client_id=1540030654425731125&redirect_uri=https%3A%2F%2Fjarvis-bot-fod2.onrender.com%2Fauth%2Fdiscord&response_type=code&scope=identify%20guilds">
-    Login with Discord
-  </a>
-</li>
-
-      </li>
-      <li><a href="/">Home</a></li>
-      <li><a href="/dashboard">Dashboard</a></li>
-      <li><a href="/privacy">Privacy Policy</a></li>
-      <li><a href="/tos">Terms of Service</a></li>
-    </ul>
   </nav>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-text">
-      <p class="tag">DISCORD BOT</p>
-      <h1>JARVIS</h1>
-      <p class="subtitle">Your All‑in‑One Discord Assistant.<br>Built to <span class="accent">Power</span> Your Server.</p>
-      <p class="desc">Jarvis brings powerful moderation, smart automation, engaging commands, and more — all in one sleek, easy‑to‑use bot.</p>
 
-      <div class="hero-buttons">
-        <a href="/invite" class="btn-primary">Invite Jarvis</a>
+  <!-- HERO -->
+  <main>
+
+    <section class="hero">
+
+      <div class="hero-content">
+
+        <div class="eyebrow">
+          <span class="status-dot"></span>
+          DISCORD BOT
+        </div>
+
+        <h1>
+          Your server.<br>
+          <span>Smarter.</span>
+        </h1>
+
+        <p class="hero-subtitle">
+          Meet Jarvis, your all-in-one Discord assistant built to
+          <strong>power, protect, and engage</strong> your community.
+        </p>
+
+        <div class="hero-buttons">
+          <a href="/invite" class="btn-primary">
+            Invite Jarvis
+            <span>→</span>
+          </a>
+
+          <a href="/dashboard" class="btn-secondary">
+            Open Dashboard
+          </a>
+        </div>
+
+        <div class="hero-status">
+          <span class="online-dot"></span>
+          <div>
+            <strong>Jarvis is online</strong>
+            <small>Ready to serve your server</small>
+          </div>
+        </div>
+
       </div>
 
-      <p class="status">🟢 Online and ready to serve!</p>
-    </div>
 
-    <div class="hero-image">
-      <img src="/images/jarvis-icon.png" alt="Jarvis Icon">
-    </div>
-  </section>
+      <div class="hero-visual">
 
-  <!-- FEATURES -->
-  <section class="features">
-    <h2>Everything You Need,<br>All in <span class="accent">One Bot</span>.</h2>
+        <div class="orb-glow"></div>
 
-    <div class="feature-grid">
-  <div class="feature-card">
-    <h3>⚙️ Advanced Moderation</h3>
-    <p>Keep your server safe with powerful moderation tools.</p>
-    <div class="extra-info">
-      <p>Auto‑mute, anti‑spam, strike system, slowmode, and customizable punishments.</p>
-    </div>
-  </div>
+        <div class="jarvis-orb">
+          <div class="orb-ring ring-one"></div>
+          <div class="orb-ring ring-two"></div>
+          <img src="/images/jarvis-icon.png" alt="Jarvis">
+        </div>
 
-  <div class="feature-card">
-    <h3>🤖 Smart Automation</h3>
-    <p>Automate tasks and save time with smart, flexible systems.</p>
-    <div class="extra-info">
-      <p>Auto‑roles, welcome flows, scheduled tasks, and dynamic triggers.</p>
-    </div>
-  </div>
+        <div class="floating-card card-top">
+          <span>⚡</span>
+          <div>
+            <strong>Fast & Reliable</strong>
+            <small>Built for your community</small>
+          </div>
+        </div>
 
-  <div class="feature-card">
-    <h3>🎮 Fun & Engagement</h3>
-    <p>Engage your community with games, economy, music, and more.</p>
-    <div class="extra-info">
-      <p>Slots, trivia, leveling, virtual currency, daily rewards, and more.</p>
-    </div>
-  </div>
+        <div class="floating-card card-bottom">
+          <span>🛡️</span>
+          <div>
+            <strong>Server Protection</strong>
+            <small>Moderation made simple</small>
+          </div>
+        </div>
 
-  <div class="feature-card">
-    <h3>📊 Detailed Analytics</h3>
-    <p>Track server activity and insights with powerful analytics tools.</p>
-    <div class="extra-info">
-      <p>Message stats, user activity heatmaps, growth tracking, and moderation logs.</p>
-    </div>
-  </div>
+      </div>
 
-  <div class="feature-card">
-    <h3>🎨 Highly Customizable</h3>
-    <p>Fit Jarvis to your server’s unique needs.</p>
-    <div class="extra-info">
-      <p>Custom embeds, themes, welcome screens, and command settings.</p>
-    </div>
-  </div>
-
-  <div class="feature-card">
-    <h3>💻 Developer Friendly</h3>
-    <p>Built with performance and developers in mind.</p>
-    <div class="extra-info">
-      <p>Slash commands, modular architecture, API‑ready endpoints, and fast responses.</p>
-    </div>
-  </div>
-</div>
+    </section>
 
 
-  <!-- CTA -->
-  <section class="cta">
-    <h3>Ready to <span class="accent">Upgrade</span> Your Server?</h3>
-    <a href="/invite" class="btn-primary">Invite Jarvis</a>
-    <p class="trusted">Trusted by thousands of servers worldwide.</p>
-  </section>
+    <!-- FEATURES -->
+    <section class="features">
+
+      <div class="section-heading">
+        <p class="section-label">WHAT JARVIS CAN DO</p>
+        <h2>Everything your server needs.</h2>
+        <p>
+          Powerful tools without the complicated setup.
+          Jarvis keeps your community running smoothly.
+        </p>
+      </div>
+
+      <div class="feature-grid">
+
+        <article class="feature-card">
+          <div class="feature-icon">🛡️</div>
+          <h3>Advanced Moderation</h3>
+          <p>
+            Keep your server safe with powerful moderation tools
+            designed to make managing your community easier.
+          </p>
+          <span class="feature-link">Explore moderation →</span>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">⚙️</div>
+          <h3>Smart Automation</h3>
+          <p>
+            Automate repetitive tasks with flexible systems
+            that work quietly in the background.
+          </p>
+          <span class="feature-link">Automate your server →</span>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">🎮</div>
+          <h3>Fun & Engagement</h3>
+          <p>
+            Give your community more reasons to stick around
+            with games, economy systems, leveling, and more.
+          </p>
+          <span class="feature-link">Boost engagement →</span>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">📊</div>
+          <h3>Server Analytics</h3>
+          <p>
+            Understand what is happening in your community
+            with useful activity and moderation insights.
+          </p>
+          <span class="feature-link">View analytics →</span>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">🎨</div>
+          <h3>Highly Customizable</h3>
+          <p>
+            Configure Jarvis around the way your server actually
+            works instead of changing your server to fit the bot.
+          </p>
+          <span class="feature-link">Customize Jarvis →</span>
+        </article>
+
+        <article class="feature-card">
+          <div class="feature-icon">💻</div>
+          <h3>Developer Friendly</h3>
+          <p>
+            Slash commands, modular systems, and API-ready
+            architecture built with flexibility in mind.
+          </p>
+          <span class="feature-link">Built for developers →</span>
+        </article>
+
+      </div>
+
+    </section>
+
+
+    <!-- COMMANDS -->
+    <section class="commands">
+
+      <div class="commands-content">
+
+        <div class="section-heading left">
+          <p class="section-label">SIMPLE COMMANDS</p>
+          <h2>Powerful features.<br><span>Simple commands.</span></h2>
+          <p>
+            Jarvis keeps your server tools accessible through
+            clean and easy-to-use slash commands.
+          </p>
+        </div>
+
+        <div class="command-window">
+
+          <div class="window-header">
+            <div class="window-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <p>jarvis • commands</p>
+          </div>
+
+          <div class="command-list">
+
+            <div class="command">
+              <span class="command-icon">/</span>
+              <div>
+                <strong>help</strong>
+                <small>View available Jarvis commands</small>
+              </div>
+            </div>
+
+            <div class="command">
+              <span class="command-icon">/</span>
+              <div>
+                <strong>moderate</strong>
+                <small>Manage members and moderation actions</small>
+              </div>
+            </div>
+
+            <div class="command">
+              <span class="command-icon">/</span>
+              <div>
+                <strong>server</strong>
+                <small>View useful information about your server</small>
+              </div>
+            </div>
+
+            <div class="command">
+              <span class="command-icon">/</span>
+              <div>
+                <strong>settings</strong>
+                <small>Configure Jarvis for your community</small>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- CTA -->
+    <section class="cta">
+
+      <div class="cta-inner">
+
+        <p class="section-label">READY WHEN YOU ARE</p>
+
+        <h2>
+          Give your server<br>
+          <span>Jarvis.</span>
+        </h2>
+
+        <p>
+          Powerful moderation, automation, engagement,
+          and more, all in one bot.
+        </p>
+
+        <a href="/invite" class="btn-primary">
+          Invite Jarvis
+          <span>→</span>
+        </a>
+
+      </div>
+
+    </section>
+
+  </main>
+
 
   <!-- FOOTER -->
   <footer>
-    <p>© 2026 Jarvis Bot. All rights reserved.</p>
+
+    <div class="footer-brand">
+      <img src="/images/jarvis-icon.png" alt="Jarvis Icon">
+      <strong>JARVIS</strong>
+    </div>
+
     <div class="footer-links">
+      <a href="/">Home</a>
+      <a href="/dashboard">Dashboard</a>
       <a href="/privacy">Privacy Policy</a>
       <a href="/tos">Terms of Service</a>
       <a href="/support">Support</a>
     </div>
+
+    <p>© 2026 Jarvis Bot. All rights reserved.</p>
+
   </footer>
+
+</body>
+</html>
