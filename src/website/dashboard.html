@@ -56,7 +56,7 @@
 
         <button class="tab" data-tab="xp-economy">
           <span class="tab-icon">✦</span>
-          <span>XP & Economy</span>
+          <span>XP &amp; Economy</span>
         </button>
 
         <button class="tab" data-tab="moderation">
@@ -228,7 +228,7 @@
               <button class="action-button" data-open-tab="xp-economy">
                 <span>✦</span>
                 <div>
-                  <strong>XP & Economy</strong>
+                  <strong>XP &amp; Economy</strong>
                   <small>Manage rewards and leveling</small>
                 </div>
                 <b>→</b>
@@ -313,10 +313,11 @@
             </p>
 
             <textarea
+              id="welcomeMessage"
               placeholder="Welcome to {server}, {user}!"
             ></textarea>
 
-            <button>Save Welcome Message</button>
+            <button id="saveWelcome">Save Welcome Message</button>
 
           </div>
 
@@ -332,11 +333,11 @@
             </p>
 
             <div class="color-picker">
-              <input type="color" value="#8366ff">
-              <span>#8366FF</span>
+              <input type="color" id="embedColor" value="#8366ff">
+              <span id="embedColorLabel">#8366FF</span>
             </div>
 
-            <button>Save Embed Color</button>
+            <button id="saveColor">Save Embed Color</button>
 
           </div>
 
@@ -345,18 +346,17 @@
 
             <div class="card-icon">▤</div>
 
-            <h3>Log Channel ID</h3>
+            <h3>Mod Log Channel</h3>
 
             <p>
-              Choose where Jarvis should send server logs.
+              Choose where Jarvis logs moderation actions like bans, kicks, and warnings.
             </p>
 
-            <input
-              type="text"
-              placeholder="123456789012345678"
-            >
+            <select id="logChannel">
+              <option value="">Select a server first</option>
+            </select>
 
-            <button>Save Log Channel</button>
+            <button id="saveLogChannel">Save Log Channel</button>
 
           </div>
 
@@ -371,7 +371,7 @@
         <div class="panel-header">
           <div>
             <p class="section-label">COMMUNITY SYSTEMS</p>
-            <h1>XP & Economy</h1>
+            <h1>XP &amp; Economy</h1>
             <p class="panel-desc">
               Control leveling, rewards, and server economy.
             </p>
@@ -408,54 +408,92 @@
 
           <div class="panel-card">
 
+            <div class="card-icon">◉</div>
+
+            <h3>Systems</h3>
+
+            <p>
+              Turn the XP and economy systems on or off for this server.
+            </p>
+
+            <div class="toggle-list">
+
+              <label class="toggle-row">
+                <span>
+                  <strong>XP System</strong>
+                  <small>Members earn XP from chat and voice</small>
+                </span>
+                <input type="checkbox" id="xpEnabled">
+                <i></i>
+              </label>
+
+              <label class="toggle-row">
+                <span>
+                  <strong>Economy</strong>
+                  <small>Currency and rewards</small>
+                </span>
+                <input type="checkbox" id="economyEnabled">
+                <i></i>
+              </label>
+
+            </div>
+
+            <button id="saveSystems">Save Systems</button>
+
+          </div>
+
+
+          <div class="panel-card coming-soon">
+
             <div class="card-icon">✦</div>
 
-            <h3>XP per Message</h3>
+            <h3>XP per Message <span class="soon-badge">Coming soon</span></h3>
 
             <p>
               Set how much XP members receive from messages.
             </p>
 
-            <input type="number" value="10">
+            <input type="number" value="10" disabled>
 
-            <button>Save XP Rate</button>
+            <button disabled>Save XP Rate</button>
 
           </div>
 
 
-          <div class="panel-card">
+          <div class="panel-card coming-soon">
 
             <div class="card-icon">♛</div>
 
-            <h3>Level-Up Reward Role</h3>
+            <h3>Level-Up Reward Role <span class="soon-badge">Coming soon</span></h3>
 
             <p>
-              Give members a role when they reach a level.
+              Give members a role when they reach a level. For now, use /levelrole in Discord.
             </p>
 
             <input
               type="text"
               placeholder="@Level 10 Role"
+              disabled
             >
 
-            <button>Save Reward Role</button>
+            <button disabled>Save Reward Role</button>
 
           </div>
 
 
-          <div class="panel-card">
+          <div class="panel-card coming-soon">
 
             <div class="card-icon">◎</div>
 
-            <h3>Currency Name</h3>
+            <h3>Currency Name <span class="soon-badge">Coming soon</span></h3>
 
             <p>
               Choose the name used for your server currency.
             </p>
 
-            <input type="text" value="Credits">
+            <input type="text" value="Credits" disabled>
 
-            <button>Save Currency</button>
+            <button disabled>Save Currency</button>
 
           </div>
 
@@ -480,11 +518,11 @@
 
         <div class="panel-grid">
 
-          <div class="panel-card">
+          <div class="panel-card coming-soon">
 
             <div class="card-icon">🛡</div>
 
-            <h3>Auto-Mod</h3>
+            <h3>Auto-Mod <span class="soon-badge">Coming soon</span></h3>
 
             <p>
               Automatically protect your server from unwanted activity.
@@ -497,7 +535,7 @@
                   <strong>Enable Auto-Mod</strong>
                   <small>Activate automatic moderation</small>
                 </span>
-                <input type="checkbox">
+                <input type="checkbox" disabled>
                 <i></i>
               </label>
 
@@ -506,7 +544,7 @@
                   <strong>Block Links</strong>
                   <small>Prevent unwanted links</small>
                 </span>
-                <input type="checkbox">
+                <input type="checkbox" disabled>
                 <i></i>
               </label>
 
@@ -515,39 +553,39 @@
                   <strong>Block Spam</strong>
                   <small>Detect repeated messages</small>
                 </span>
-                <input type="checkbox">
+                <input type="checkbox" disabled>
                 <i></i>
               </label>
 
             </div>
 
-            <button>Save Auto-Mod</button>
+            <button disabled>Save Auto-Mod</button>
 
           </div>
 
 
-          <div class="panel-card">
+          <div class="panel-card coming-soon">
 
             <div class="card-icon">◷</div>
 
-            <h3>Mute Duration</h3>
+            <h3>Mute Duration <span class="soon-badge">Coming soon</span></h3>
 
             <p>
               Set the default mute duration in minutes.
             </p>
 
-            <input type="number" value="10">
+            <input type="number" value="10" disabled>
 
-            <button>Save Mute Settings</button>
+            <button disabled>Save Mute Settings</button>
 
           </div>
 
 
-          <div class="panel-card">
+          <div class="panel-card coming-soon">
 
             <div class="card-icon">⚑</div>
 
-            <h3>Ban Appeal Link</h3>
+            <h3>Ban Appeal Link <span class="soon-badge">Coming soon</span></h3>
 
             <p>
               Add a link members can use to submit an appeal.
@@ -556,9 +594,10 @@
             <input
               type="url"
               placeholder="https://yourserver.com/appeal"
+              disabled
             >
 
-            <button>Save Appeal Link</button>
+            <button disabled>Save Appeal Link</button>
 
           </div>
 
@@ -593,22 +632,23 @@
               Choose where Jarvis gets memes from.
             </p>
 
-            <select>
-              <option>Reddit</option>
-              <option>Local folder</option>
-              <option>Custom API</option>
+            <select id="memeSource">
+              <option value="default">Default</option>
+              <option value="reddit">Reddit</option>
+              <option value="imgur">Imgur</option>
+              <option value="tenor">Tenor</option>
             </select>
 
-            <button>Save Meme Source</button>
+            <button id="saveMemeSource">Save Meme Source</button>
 
           </div>
 
 
-          <div class="panel-card">
+          <div class="panel-card coming-soon">
 
             <div class="card-icon">💬</div>
 
-            <h3>Reaction Triggers</h3>
+            <h3>Reaction Triggers <span class="soon-badge">Coming soon</span></h3>
 
             <p>
               Create automatic reactions for specific messages.
@@ -616,26 +656,27 @@
 
             <textarea
               placeholder="hello -> 👋&#10;jarvis -> 🤖"
+              disabled
             ></textarea>
 
-            <button>Save Reactions</button>
+            <button disabled>Save Reactions</button>
 
           </div>
 
 
-          <div class="panel-card">
+          <div class="panel-card coming-soon">
 
             <div class="card-icon">!</div>
 
-            <h3>Custom Prefix</h3>
+            <h3>Custom Prefix <span class="soon-badge">Coming soon</span></h3>
 
             <p>
               Choose the prefix used for classic commands.
             </p>
 
-            <input type="text" value="!">
+            <input type="text" value="!" disabled>
 
-            <button>Save Prefix</button>
+            <button disabled>Save Prefix</button>
 
           </div>
 

@@ -246,45 +246,95 @@ async function loadUser() {
    STATUS
 ======================================== */
 
-const uptime =
-  document.getElementById("uptime");
+const uptime = document.getElementById("uptime");
+const ping = document.getElementById("ping");
+const overviewUptime = document.getElementById("overviewUptime");
+const overviewPing = document.getElementById("overviewPing");
 
-const ping =
-  document.getElementById("ping");
+function formatUptime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor(totalSeconds / 3600) % 24;
+  const minutes = Math.floor(totalSeconds / 60) % 60;
 
-const overviewUptime =
-  document.getElementById("overviewUptime");
-
-const overviewPing =
-  document.getElementById("overviewPing");
-
-
-/*
-  These remain placeholders until your backend
-  provides real uptime and ping values.
-*/
-
-const currentUptime = "3h 21m";
-const currentPing = "42";
-
-if (uptime) {
-  uptime.textContent =
-    currentUptime;
+  return days > 0
+    ? `${days}d ${hours}h ${minutes}m`
+    : `${hours}h ${minutes}m`;
 }
 
-if (ping) {
-  ping.textContent =
-    `${currentPing} ms`;
+async function loadStatus() {
+  try {
+    const res = await fetch("/api/status");
+
+    if (!res.ok) {
+      return;
+    }
+
+    const data = await res.json();
+
+    const currentUptime = formatUptime(data.uptime_ms);
+    const currentPing = data.ping >= 0 ? Math.round(data.ping) : "—";
+
+    if (uptime) uptime.textContent = currentUptime;
+    if (ping) ping.textContent = `${currentPing} ms`;
+    if (overviewUptime) overviewUptime.textContent = currentUptime;
+    if (overviewPing) overviewPing.textContent = currentPing;
+
+  } catch (error) {
+    console.error("Could not load status:", error);
+  }
 }
 
-if (overviewUptime) {
-  overviewUptime.textContent =
-    currentUptime;
-}
 
-if (overviewPing) {
-  overviewPing.textContent =
-    currentPing;
+/* ========================================
+   SAVE SETTINGS
+======================================== */
+
+const saveButton = document.getElementById("saveSettings");
+
+if (saveButton) {
+  saveButton.addEventListener("click", async () => {
+
+    const guildId =
+      document.getElementById("serverSelect").value;
+
+    if (!guildId) {
+      alert("Select a server first.");
+      return;
+    }
+
+    const welcomeMessage =
+      document.querySelector("#server-settings textarea");
+
+    const embedColor =
+      document.querySelector("#server-settings input[type=color]");
+
+    try {
+
+      const res = await fetch(`/api/update-settings/${guildId}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          embed_color: embedColor?.value,
+          welcome_message: welcomeMessage?.value,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Failed to save settings.");
+        return;
+      }
+
+      alert("Settings saved!");
+
+    } catch (error) {
+      console.error("Could not save settings:", error);
+      alert("Something went wrong saving your settings.");
+    }
+
+  });
 }
 
 
@@ -294,3 +344,5 @@ if (overviewPing) {
 
 loadServers();
 loadUser();
+loadStatus();
+setInterval(loadStatus, 30000);
