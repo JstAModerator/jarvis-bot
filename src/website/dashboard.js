@@ -6,6 +6,12 @@ async function loadServers() {
   try {
     const res = await fetch("/api/guilds");
 
+    // Not logged in (or login expired): send them through Discord login
+    if (res.status === 401) {
+      window.location.href = "/login";
+      return;
+    }
+
     if (!res.ok) {
       throw new Error("Failed to load servers");
     }
@@ -74,25 +80,8 @@ document
 
       const settings = await response.json();
 
-      const welcomeMessage =
-        document.querySelector(
-          "#server-settings textarea"
-        );
-
-      const embedColor =
-        document.querySelector(
-          "#server-settings input[type=color]"
-        );
-
-      if (welcomeMessage) {
-        welcomeMessage.value =
-          settings.welcome_message || "";
-      }
-
-      if (embedColor && settings.embed_color) {
-        embedColor.value =
-          settings.embed_color;
-      }
+      applySettings(settings);
+      await loadLogChannels(guildId);
 
     } catch (error) {
       console.error(
@@ -287,55 +276,182 @@ async function loadStatus() {
 
 
 /* ========================================
-   SAVE SETTINGS
+   SETTINGS FORM (load + save)
 ======================================== */
 
-const saveButton = document.getElementById("saveSettings");
+const welcomeMessageInput = document.getElementById("welcomeMessage");
+const embedColorInput = document.getElementById("embedColor");
+const embedColorLabel = document.getElementById("embedColorLabel");
+const logChannelSelect = document.getElementById("logChannel");
+const memeSourceSelect = document.getElementById("memeSource");
+const xpEnabledInput = document.getElementById("xpEnabled");
+const economyEnabledInput = document.getElementById("economyEnabled");
 
-if (saveButton) {
-  saveButton.addEventListener("click", async () => {
+function getGuildId() {
+  return document.getElementById("serverSelect").value;
+}
 
-    const guildId =
-      document.getElementById("serverSelect").value;
+// Fills the form from /api/settings/:guildId
+function applySettings(settings) {
+  if (welcomeMessageInput) {
+    welcomeMessageInput.value = settings.welcome_message || "";
+  }
 
-    if (!guildId) {
-      alert("Select a server first.");
-      return;
+  if (embedColorInput && settings.embed_color) {
+    embedColorInput.value = settings.embed_color;
+
+    if (embedColorLabel) {
+      embedColorLabel.textContent = settings.embed_color.toUpperCase();
+    }
+  }
+
+  if (memeSourceSelect && settings.meme_source) {
+    memeSourceSelect.value = settings.meme_source;
+  }
+
+  if (xpEnabledInput) xpEnabledInput.checked = !!settings.xp_enabled;
+  if (economyEnabledInput) economyEnabledInput.checked = !!settings.economy_enabled;
+}
+
+// Briefly shows a message on a button instead of using alert()
+function flashButton(button, text) {
+  if (!button.dataset.label) {
+    button.dataset.label = button.textContent;
+  }
+
+  button.textContent = text;
+  button.disabled = true;
+
+  setTimeout(() => {
+    button.textContent = button.dataset.label;
+    button.disabled = false;
+  }, 1600);
+}
+
+function onClick(id, handler) {
+  const element = document.getElementById(id);
+
+  if (element) {
+    element.addEventListener("click", () => handler(element));
+  }
+}
+
+async function postSettings(button, payload) {
+  const guildId = getGuildId();
+
+  if (!guildId) {
+    return flashButton(button, "Select a server first");
+  }
+
+  try {
+    const res = await fetch(`/api/update-settings/${guildId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      return flashButton(button, data.error || "Failed to save");
     }
 
-    const welcomeMessage =
-      document.querySelector("#server-settings textarea");
+    flashButton(button, "Saved ✓");
+  } catch (error) {
+    console.error("Could not save settings:", error);
+    flashButton(button, "Failed to save");
+  }
+}
 
-    const embedColor =
-      document.querySelector("#server-settings input[type=color]");
+onClick("saveWelcome", (button) =>
+  postSettings(button, { welcome_message: welcomeMessageInput.value })
+);
 
-    try {
+onClick("saveColor", (button) =>
+  postSettings(button, { embed_color: embedColorInput.value })
+);
 
-      const res = await fetch(`/api/update-settings/${guildId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          embed_color: embedColor?.value,
-          welcome_message: welcomeMessage?.value,
-        }),
-      });
+onClick("saveMemeSource", (button) =>
+  postSettings(button, { meme_source: memeSourceSelect.value })
+);
 
-      const data = await res.json();
+onClick("saveSystems", (button) =>
+  postSettings(button, {
+    xp_enabled: xpEnabledInput.checked,
+    economy_enabled: economyEnabledInput.checked,
+  })
+);
 
-      if (!res.ok) {
-        alert(data.error || "Failed to save settings.");
-        return;
-      }
-
-      alert("Settings saved!");
-
-    } catch (error) {
-      console.error("Could not save settings:", error);
-      alert("Something went wrong saving your settings.");
-    }
-
+if (embedColorInput && embedColorLabel) {
+  embedColorInput.addEventListener("input", () => {
+    embedColorLabel.textContent = embedColorInput.value.toUpperCase();
   });
 }
+
+
+/* ========================================
+   LOG CHANNEL
+======================================== */
+
+async function loadLogChannels(guildId) {
+  if (!logChannelSelect) return;
+
+  logChannelSelect.innerHTML = `<option value="">Logging disabled</option>`;
+
+  try {
+    const [channelsRes, modlogRes] = await Promise.all([
+      fetch(`/api/channels/${guildId}`),
+      fetch(`/api/modlog/${guildId}`),
+    ]);
+
+    if (!channelsRes.ok || !modlogRes.ok) {
+      throw new Error("Failed to load log channels");
+    }
+
+    const channels = await channelsRes.json();
+    const modlog = await modlogRes.json();
+
+    channels.forEach((channel) => {
+      const option = document.createElement("option");
+
+      option.value = channel.id;
+      option.textContent = `# ${channel.name}`;
+
+      logChannelSelect.appendChild(option);
+    });
+
+    logChannelSelect.value = modlog.channel_id || "";
+  } catch (error) {
+    console.error("Could not load log channels:", error);
+  }
+}
+
+onClick("saveLogChannel", async (button) => {
+  const guildId = getGuildId();
+
+  if (!guildId) {
+    return flashButton(button, "Select a server first");
+  }
+
+  try {
+    const res = await fetch(`/api/modlog/${guildId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel_id: logChannelSelect.value || null }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      return flashButton(button, data.error || "Failed to save");
+    }
+
+    flashButton(button, "Saved ✓");
+  } catch (error) {
+    console.error("Could not save log channel:", error);
+    flashButton(button, "Failed to save");
+  }
+});
 
 
 /* ========================================

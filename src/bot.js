@@ -1,7 +1,7 @@
-import { Client, GatewayIntentBits } from "discord.js";
+import { Client, GatewayIntentBits, ChannelType, PermissionFlagsBits } from "discord.js";
 import dotenv from "dotenv";
 import express from "express";
-import session from "express-session";
+import crypto from "crypto";
 import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -9,6 +9,7 @@ import Database from "better-sqlite3";
 import { loadCommands } from "./handlers/commandLoader.js";
 import { deployCommands } from "./deploy-commands.js";
 import { registerXpHandlers } from "./handlers/xpHandler.js";
+import { db as modlogDb, getModlogChannel } from "./database/moderation.js";
 
 dotenv.config();
 
@@ -89,15 +90,155 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.use(express.json());
+
+// The dashboard page requires login, so block direct access to the raw file.
+app.get("/dashboard.html", (req, res) => res.redirect("/dashboard"));
+
 app.use(express.static(path.join(__dirname, "website")));
 
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "jarvis-dashboard-secret",
-    resave: false,
-    saveUninitialized: false,
-  })
-);
+/* ------------------------------
+   LOGIN SESSIONS (encrypted cookie, no server storage)
+   The cookie holds the user's Discord tokens, encrypted with
+   SESSION_SECRET, so logins survive restarts and redeploys.
+------------------------------ */
+
+const SESSION_COOKIE = "jarvis_session";
+const STATE_COOKIE = "jarvis_oauth_state";
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // stay logged in for 30 days
+const REDIRECT_URI = "https://jarvis-bot-fod2.onrender.com/auth/discord";
+const SECURE_COOKIES = process.env.NODE_ENV === "production";
+
+if (!process.env.SESSION_SECRET) {
+  console.warn("⚠️ SESSION_SECRET is not set — logins will NOT survive a restart. Set it in Render.");
+}
+
+const SESSION_KEY = crypto
+  .createHash("sha256")
+  .update(process.env.SESSION_SECRET || crypto.randomBytes(32))
+  .digest();
+
+function encryptSession(data) {
+  const iv = crypto.randomBytes(12);
+  const cipher = crypto.createCipheriv("aes-256-gcm", SESSION_KEY, iv);
+
+  const encrypted = Buffer.concat([
+    cipher.update(JSON.stringify(data), "utf8"),
+    cipher.final(),
+  ]);
+
+  return Buffer.concat([iv, cipher.getAuthTag(), encrypted]).toString("base64url");
+}
+
+function decryptSession(value) {
+  try {
+    const buffer = Buffer.from(value, "base64url");
+
+    const decipher = crypto.createDecipheriv(
+      "aes-256-gcm",
+      SESSION_KEY,
+      buffer.subarray(0, 12)
+    );
+    decipher.setAuthTag(buffer.subarray(12, 28));
+
+    const decrypted = Buffer.concat([
+      decipher.update(buffer.subarray(28)),
+      decipher.final(),
+    ]);
+
+    return JSON.parse(decrypted.toString("utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function readCookie(req, name) {
+  const header = req.headers.cookie;
+  if (!header) return null;
+
+  for (const part of header.split(";")) {
+    const [key, ...rest] = part.trim().split("=");
+    if (key === name) return decodeURIComponent(rest.join("="));
+  }
+
+  return null;
+}
+
+// Returns the logged-in session, or null if missing / tampered / older than 30 days
+function getSession(req) {
+  const raw = readCookie(req, SESSION_COOKIE);
+  if (!raw) return null;
+
+  const session = decryptSession(raw);
+  if (!session || !session.refresh_token) return null;
+  if (Date.now() - session.created_at > SESSION_MAX_AGE_MS) return null;
+
+  return session;
+}
+
+function saveSession(res, session) {
+  res.cookie(SESSION_COOKIE, encryptSession(session), {
+    httpOnly: true,
+    secure: SECURE_COOKIES,
+    sameSite: "lax",
+    maxAge: SESSION_MAX_AGE_MS,
+  });
+}
+
+// Trades a refresh token for a new access token. Shared between
+// simultaneous requests so the same refresh token isn't used twice.
+const refreshing = new Map();
+
+function refreshSession(session) {
+  if (!refreshing.has(session.refresh_token)) {
+    const attempt = (async () => {
+      try {
+        const response = await fetch("https://discord.com/api/oauth2/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            client_id: process.env.CLIENT_ID,
+            client_secret: process.env.CLIENT_SECRET,
+            grant_type: "refresh_token",
+            refresh_token: session.refresh_token,
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data.access_token) return null;
+
+        return {
+          ...session,
+          access_token: data.access_token,
+          refresh_token: data.refresh_token || session.refresh_token,
+          expires_at: Date.now() + data.expires_in * 1000,
+        };
+      } catch (error) {
+        console.error("TOKEN REFRESH ERROR:", error);
+        return null;
+      }
+    })().finally(() => refreshing.delete(session.refresh_token));
+
+    refreshing.set(session.refresh_token, attempt);
+  }
+
+  return refreshing.get(session.refresh_token);
+}
+
+// Returns a valid Discord access token for this request, refreshing it if needed
+async function getAccessToken(req, res) {
+  const session = getSession(req);
+  if (!session) return null;
+
+  if (session.expires_at - Date.now() > 60000) {
+    return session.access_token;
+  }
+
+  const refreshed = await refreshSession(session);
+  if (!refreshed) return null;
+
+  saveSession(res, refreshed);
+  return refreshed.access_token;
+}
 
 /* ------------------------------
    WEBSITE ROUTES
@@ -108,6 +249,8 @@ app.get("/", (req, res) => {
 });
 
 app.get("/dashboard", (req, res) => {
+  if (!getSession(req)) return res.redirect("/login");
+
   res.sendFile(path.join(__dirname, "website", "dashboard.html"));
 });
 
@@ -120,16 +263,57 @@ app.get("/privacy", (req, res) => {
 });
 
 /* ------------------------------
-   DISCORD OAUTH CALLBACK
+   DISCORD LOGIN
 ------------------------------ */
 
-app.get("/auth/discord", async (req, res) => {
-  const code = req.query.code;
+app.get("/login", (req, res) => {
+  const state = crypto.randomBytes(16).toString("hex");
 
-  if (!code) return res.send("Missing ?code");
+  res.cookie(STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: SECURE_COOKIES,
+    sameSite: "lax",
+    maxAge: 10 * 60 * 1000,
+  });
+
+  const params = new URLSearchParams({
+    client_id: process.env.CLIENT_ID,
+    response_type: "code",
+    redirect_uri: REDIRECT_URI,
+    scope: "identify guilds",
+    state,
+  });
+
+  // If they've approved Jarvis before, skip Discord's "Authorize" screen.
+  // If they haven't, Discord returns an error and we retry with ?consent=1.
+  if (req.query.consent !== "1") {
+    params.set("prompt", "none");
+  }
+
+  res.redirect(`https://discord.com/oauth2/authorize?${params}`);
+});
+
+app.get("/auth/discord", async (req, res) => {
+  const { code, state, error } = req.query;
+  const expectedState = readCookie(req, STATE_COOKIE);
+
+  res.clearCookie(STATE_COOKIE);
+
+  // Missing / mismatched state (expired login, or an old direct link): start over
+  if (!state || !expectedState || state !== expectedState) {
+    return res.redirect("/login");
+  }
+
+  if (error) {
+    // Never approved before (prompt=none) -> show the full authorize screen.
+    // The user pressed Cancel -> back to the front page.
+    return res.redirect(error === "access_denied" ? "/" : "/login?consent=1");
+  }
+
+  if (!code) return res.redirect("/login");
 
   try {
-    const tokenData = await fetch("https://discord.com/api/oauth2/token", {
+    const response = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
@@ -137,17 +321,34 @@ app.get("/auth/discord", async (req, res) => {
         client_secret: process.env.CLIENT_SECRET,
         grant_type: "authorization_code",
         code,
-        redirect_uri: "https://jarvis-bot-fod2.onrender.com/auth/discord",
+        redirect_uri: REDIRECT_URI,
       }),
-    }).then((r) => r.json());
+    });
 
-    req.session.access_token = tokenData.access_token;
+    const tokenData = await response.json();
+
+    if (!response.ok || !tokenData.access_token || !tokenData.refresh_token) {
+      console.error("OAuth token exchange failed:", tokenData);
+      return res.send("Discord login failed. Please try again.");
+    }
+
+    saveSession(res, {
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token,
+      expires_at: Date.now() + tokenData.expires_in * 1000,
+      created_at: Date.now(),
+    });
 
     res.redirect("/dashboard");
   } catch (err) {
     console.error("OAuth error:", err);
     res.send("OAuth failed.");
   }
+});
+
+app.get("/logout", (req, res) => {
+  res.clearCookie(SESSION_COOKIE);
+  res.redirect("/");
 });
 
 /* ------------------------------
@@ -157,13 +358,14 @@ app.get("/auth/discord", async (req, res) => {
 const MANAGE_GUILD = 0x20n;
 const ADMINISTRATOR = 0x8n;
 
-// Fetches the logged-in user's guilds from Discord, cached in the
-// session for 60s so we don't hit Discord's rate limits.
-async function getUserGuilds(req) {
-  const token = req.session.access_token;
+// Short-lived server-side cache so we don't hit Discord's rate limits
+const guildCache = new Map();
+
+async function getUserGuilds(req, res) {
+  const token = await getAccessToken(req, res);
   if (!token) return null;
 
-  const cached = req.session.guildCache;
+  const cached = guildCache.get(token);
   if (cached && Date.now() - cached.at < 60000) return cached.data;
 
   const response = await fetch("https://discord.com/api/users/@me/guilds", {
@@ -175,7 +377,9 @@ async function getUserGuilds(req) {
   const data = await response.json();
   if (!Array.isArray(data)) return null;
 
-  req.session.guildCache = { at: Date.now(), data };
+  if (guildCache.size > 500) guildCache.clear();
+  guildCache.set(token, { at: Date.now(), data });
+
   return data;
 }
 
@@ -192,7 +396,7 @@ function canManage(guild) {
 // Blocks the request unless the user manages this server AND Jarvis is in it.
 async function requireGuildAccess(req, res, next) {
   try {
-    const guilds = await getUserGuilds(req);
+    const guilds = await getUserGuilds(req, res);
 
     if (!guilds) {
       return res.status(401).json({ error: "Not logged in." });
@@ -221,8 +425,8 @@ async function requireGuildAccess(req, res, next) {
 
 app.get("/api/guilds", async (req, res) => {
   try {
-    const guilds = await getUserGuilds(req);
-    if (!guilds) return res.json([]);
+    const guilds = await getUserGuilds(req, res);
+    if (!guilds) return res.status(401).json({ error: "Not logged in." });
 
     const usable = guilds
       .filter((g) => canManage(g) && client.guilds.cache.has(g.id))
@@ -251,7 +455,7 @@ app.get("/api/settings/:guildId", requireGuildAccess, (req, res) => {
 ------------------------------ */
 
 app.get("/api/user", async (req, res) => {
-  const token = req.session.access_token;
+  const token = await getAccessToken(req, res);
   if (!token) return res.json({ username: "Unknown" });
 
   try {
@@ -334,11 +538,81 @@ app.post("/api/update-settings/:guildId", requireGuildAccess, (req, res) => {
 });
 
 /* ------------------------------
+   API: Text channels Jarvis can post in
+------------------------------ */
+
+app.get("/api/channels/:guildId", requireGuildAccess, (req, res) => {
+  const guild = client.guilds.cache.get(req.params.guildId);
+  const me = guild.members.me;
+
+  const channels = guild.channels.cache
+    .filter((c) => c.type === ChannelType.GuildText)
+    .filter((c) =>
+      c.permissionsFor(me)?.has([
+        PermissionFlagsBits.ViewChannel,
+        PermissionFlagsBits.SendMessages,
+      ])
+    )
+    .sort((a, b) => a.rawPosition - b.rawPosition)
+    .map((c) => ({ id: c.id, name: c.name }));
+
+  res.json(channels);
+});
+
+/* ------------------------------
+   API: Modlog channel (get / set / disable)
+------------------------------ */
+
+app.get("/api/modlog/:guildId", requireGuildAccess, (req, res) => {
+  res.json({ channel_id: getModlogChannel(req.params.guildId) });
+});
+
+app.post("/api/modlog/:guildId", requireGuildAccess, (req, res) => {
+  const guild = client.guilds.cache.get(req.params.guildId);
+  const { channel_id } = req.body;
+
+  try {
+    // Empty value = disable logging
+    if (!channel_id) {
+      modlogDb.prepare(`DELETE FROM modlog_settings WHERE guild_id = ?`).run(guild.id);
+      return res.json({ success: true, channel_id: null });
+    }
+
+    const channel = guild.channels.cache.get(String(channel_id));
+
+    if (!channel || channel.type !== ChannelType.GuildText) {
+      return res.status(400).json({ error: "That isn't a text channel in this server." });
+    }
+
+    const canSend = channel
+      .permissionsFor(guild.members.me)
+      ?.has([PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages]);
+
+    if (!canSend) {
+      return res.status(400).json({ error: "Jarvis can't send messages in that channel." });
+    }
+
+    modlogDb
+      .prepare(`
+        INSERT INTO modlog_settings (guild_id, channel_id)
+        VALUES (?, ?)
+        ON CONFLICT(guild_id) DO UPDATE SET channel_id = excluded.channel_id
+      `)
+      .run(guild.id, channel.id);
+
+    res.json({ success: true, channel_id: channel.id });
+  } catch (error) {
+    console.error("MODLOG API ERROR:", error);
+    res.status(500).json({ error: "Failed to save the log channel." });
+  }
+});
+
+/* ------------------------------
    API: Live bot status
 ------------------------------ */
 
 app.get("/api/status", (req, res) => {
-  if (!req.session.access_token) {
+  if (!getSession(req)) {
     return res.status(401).json({ error: "Not logged in." });
   }
 
